@@ -1,0 +1,4 @@
+
+Icons:
+    - /icon.png (Yannick Lung; https://www.iconfinder.com/yanlu)
+    - /img/share/* (https://simplesharingbuttons.com)

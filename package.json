@@ -1,0 +1,65 @@
+{
+    "name": "vscode-remote-workspace",
+    "displayName": "Remote Workspace",
+    "description": "Multi protocol support for handling remote files like local ones.",
+    "version": "0.0.1",
+    "publisher": "mkloubert",
+    "engines": {
+        "vscode": "^1.23.0"
+    },
+    "categories": [
+        "Azure",
+        "Other"
+    ],
+    "keywords": [
+        "SFTP",
+        "FTP",
+        "Remote",
+        "Files",
+        "WorkspaceFolders",
+        "multi-root ready"
+    ],
+    "activationEvents": [
+        "*"
+    ],
+    "main": "./out/extension",
+    "contributes": {
+        "commands": []
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    },
+    "icon": "icon.png",
+    "badges": [
+        {
+            "description": "PayPal Donate",
+            "url": "https://img.shields.io/badge/Donate-PayPal-green.svg",
+            "href": "https://paypal.me/MarcelKloubert"
+        }
+    ],
+    "author": {
+        "name": "Marcel Joachim Kloubert"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mkloubert/vscode-remote-workspace"
+    },
+    "bugs": {
+        "url": "https://github.com/mkloubert/vscode-remote-workspace/issues"
+    },
+    "readmeFilename": "README.md",
+    "devDependencies": {
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6",
+        "tslint": "^5.8.0",
+        "@types/node": "^7.0.43",
+        "@types/mocha": "^2.2.42"
+    },
+    "dependencies": {
+        "vscode-helpers": "^2.2.0"
+    }
+}
