@@ -19,8 +19,12 @@
 
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
+import * as vscrw_fs_sftp from './fs/sftp';
 
 export async function activate(context: vscode.ExtensionContext) {
+    vscrw_fs_sftp.SFTPFileSystem.register( context );
+
+    // vscode.workspace.updateWorkspaceFolders()
 }
 
 export async function deactivate() {
