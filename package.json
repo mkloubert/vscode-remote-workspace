@@ -2,29 +2,29 @@
     "name": "vscode-remote-workspace",
     "displayName": "Remote Workspace",
     "description": "Multi protocol support for handling remote files like local ones.",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "publisher": "mkloubert",
     "engines": {
         "vscode": "^1.23.0"
     },
     "categories": [
-        "Azure",
         "Other"
     ],
     "keywords": [
         "SFTP",
         "FTP",
         "Remote",
-        "Files",
         "WorkspaceFolders",
+        "Workspaces",
         "multi-root ready"
     ],
     "activationEvents": [
-        "*"
+        "onFileSystem:sftp",
+        "onFileSystemAccess:sftp"
     ],
     "main": "./out/extension",
     "contributes": {
-        "commands": []
+        "commands": [ ]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
@@ -53,7 +53,10 @@
     },
     "readmeFilename": "README.md",
     "devDependencies": {
+        "@types/lodash": "^4.14.108",
         "@types/mocha": "^2.2.42",
+        "@types/moment": "^2.13.0",
+        "@types/moment-timezone": "^0.5.4",
         "@types/node": "^7.0.43",
         "@types/ssh2-sftp-client": "^2.0.1",
         "tslint": "^5.8.0",
@@ -61,6 +64,9 @@
         "vscode": "^1.1.6"
     },
     "dependencies": {
+        "lodash": "^4.17.10",
+        "moment": "^2.22.1",
+        "moment-timezone": "^0.5.17",
         "ssh2-sftp-client": "^2.2.1",
         "vscode-helpers": "^2.2.0"
     }

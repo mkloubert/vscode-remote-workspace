@@ -16,21 +16,17 @@
  */
 
 import * as vscode from 'vscode';
-import * as vscode_helpers from 'vscode-helpers';
 
 /**
  * SFTP file system.
  */
-export abstract class FileSystemBase extends vscode_helpers.DisposableBase
-                                     implements vscode.FileSystemProvider {
+export abstract class FileSystemBase implements vscode.FileSystemProvider {
     private readonly _EVENT_EMITTER;
 
     /**
      * Initializes a new instance of that class.
      */
     public constructor() {
-        super();
-
         this._EVENT_EMITTER = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
         this.onDidChangeFile = this._EVENT_EMITTER.event;
     }
