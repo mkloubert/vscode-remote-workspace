@@ -14,6 +14,9 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
 1. [Install](#install-)
 2. [How to use](#how-to-use-)
    * [FTP](#ftp-)
+   * [S3 Buckets](#s3-buckets-)
+     * [credential_type](#credential_type-)
+     * [Parameters](#parameters-)
    * [SFTP](#sftp-)
 3. [Support and contribute](#support-and-contribute-)
 4. [Related projects](#related-projects-)
@@ -43,17 +46,50 @@ Create (or update) a `.code-workspace` file and open it by using `Open Workspace
 }
 ```
 
+### S3 Buckets [[&uarr;](#how-to-use-)]
+
+URL Format: `s3://[credential_type@]bucket[/path/to/file/or/folder][?option1=value1&option2=value2]`
+
+```json
+{
+    "folders": [{
+        "uri": "s3://my-bucket/?acl=public-read",
+        "name": "My S3 Bucket"
+    }],
+    "settings": {}
+}
+```
+
+#### credential_type [[&uarr;](#s3-buckets-)]
+
+Default value: `shared`
+
+| Name | Description | Class in [AWS SDK](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/index.html) |
+| ---- | --------- | --------- |
+| `environment` | Represents credentials from the environment. | [EnvironmentCredentials](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/EnvironmentCredentials.html) |
+| `file` | Represents credentials from a JSON file on disk. | [FileSystemCredentials](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/FileSystemCredentials.html) |
+| `shared` | Represents credentials loaded from shared credentials file. | [SharedIniFileCredentials](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SharedIniFileCredentials.html) |
+
+##### Parameters [[&uarr;](#s3-buckets-)]
+
+| Name | Description | Example | 
+| ---- | --------- | --------- | 
+| `acl` | The [ACL](https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html) for new or updated files to use. Default: `private` | `acl=public-read` | 
+| `file` | If credential type is set to `file`, this defines the path to the `.json` file, which should be used. Relative paths will be mapped to the `.aws` sub folder inside the user's home directory. | `file=aws.json` |
+| `profile` | If credential type is set to `shared`, this defines the name of the section inside the `.ini` file, which should be used. Default: `default` | `profile=mkloubert` |
+| `var_prefix` | If credential type is set to `environment`, this defines the custom prefix for the environment variables (without `_` suffix!), which contain the credentials. Default: `AWS` | `var_prefix=MY_AWS_PREFIX` |
+
 ### FTP [[&uarr;](#how-to-use-)]
 
 URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
 
 ```json
 {
-	"folders": [{
+    "folders": [{
         "uri": "ftp://my-user:my-password@ftp.example.com/",
         "name": "My FTP folder"
     }],
-	"settings": {}
+    "settings": {}
 }
 ```
 
@@ -63,11 +99,11 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder]`
 
 ```json
 {
-	"folders": [{
+    "folders": [{
         "uri": "sftp://my-user:my-password@sftp.example.com/",
         "name": "My SFTP folder"
     }],
-	"settings": {}
+    "settings": {}
 }
 ```
 

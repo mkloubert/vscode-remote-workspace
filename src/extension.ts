@@ -19,24 +19,24 @@
 
 import * as _ from 'lodash';
 import * as Path from 'path';
+import * as URL from 'url';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw_fs_ftp from './fs/ftp';
+import * as vscrw_fs_s3 from './fs/s3';
 import * as vscrw_fs_sftp from './fs/sftp';
+
+/**
+ * A key value paris.
+ */
+export type KeyValuePairs<TValue = any> = { [key: string]: TValue };
 
 let isDeactivating = false;
 
 export function activate(context: vscode.ExtensionContext) {
     vscrw_fs_ftp.FTPFileSystem.register( context );
+    vscrw_fs_s3.S3FileSystem.register( context );
     vscrw_fs_sftp.SFTPFileSystem.register( context );
-
-
-    /*
-    const WF = vscode_helpers.buildWorkflow();
-
-    if (!isDeactivating) {
-        await WF.start();
-    } */
 }
 
 export function deactivate() {
@@ -105,4 +105,29 @@ export function toUInt8Array(buff: Buffer): Uint8Array {
     }
 
     return ARR;
+}
+
+/**
+ * Extracts the query parameters of an URI to an object.
+ *
+ * @param {URL.Url|vscode.Uri} uri The URI.
+ *
+ * @return {deploy_contracts.KeyValuePairs<string>} The parameters of the URI as object.
+ */
+export function uriParamsToObject(uri: URL.Url | vscode.Uri): KeyValuePairs<string> {
+    if (_.isNil(uri)) {
+        return <any>uri;
+    }
+
+    let params: any;
+    if (!vscode_helpers.isEmptyString(uri.query)) {
+        // s. https://css-tricks.com/snippets/jquery/get-query-params-object/
+        params = uri.query.replace(/(^\?)/, '')
+                          .split("&")
+                          .map(function(n) { return n = n.split("="), this[vscode_helpers.normalizeString(n[0])] =
+                                                                      vscode_helpers.toStringSafe(decodeURIComponent(n[1])), this; }
+                          .bind({}))[0];
+    }
+
+    return params || {};
 }
