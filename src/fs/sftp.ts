@@ -16,7 +16,6 @@
  */
 
 import * as _ from 'lodash';
-import * as Moment from 'moment';
 import * as Path from 'path';
 import * as SFTP from 'ssh2-sftp-client';
 import * as vscode from 'vscode';
@@ -176,9 +175,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
+    public async readDirectory(uri: vscode.Uri): Promise<vscrw_fs.DirectoryEntry[]> {
         return this.forConnection(uri, async (conn) => {
-            const ITEMS: [string, vscode.FileType][] = [];
+            const ITEMS: vscrw_fs.DirectoryEntry[] = [];
 
             try {
                 const LIST = await conn.client.list(
@@ -247,17 +246,10 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }) {
         await this.forConnection(oldUri, async (conn) => {
-            const OLD_STAT = await this.tryGetStat( oldUri, conn );
-            if (false === OLD_STAT) {
-                throw vscode.FileSystemError.FileNotFound( oldUri );
-            }
+            const OLD_STAT = await this.statInner( oldUri, conn );
 
             const NEW_STAT = await this.tryGetStat( newUri, conn );
             if (false !== NEW_STAT) {
-                if (vscode.FileType.Directory === NEW_STAT.type) {
-                    throw vscode.FileSystemError.FileIsADirectory( newUri );
-                }
-
                 if (!options.overwrite) {
                     throw vscode.FileSystemError.FileExists( newUri );
                 }
@@ -282,7 +274,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             return {
                 type: vscode.FileType.Directory,
                 ctime: 0,
-                mtime: Moment.utc().unix(),
+                mtime: 0,
                 size: 0,
             };
         }
@@ -371,7 +363,7 @@ function toFileStat(fi: SFTP.FileInfo): [ string, vscode.FileStat ] {
         const STAT: vscode.FileStat = {
             type: vscode.FileType.Unknown,
             ctime: 0,
-            mtime: Moment.utc().unix(),
+            mtime: 0,
             size: 0,
         };
 

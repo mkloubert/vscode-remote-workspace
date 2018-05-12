@@ -21,11 +21,13 @@ import * as _ from 'lodash';
 import * as Path from 'path';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
+import * as vscrw_fs_ftp from './fs/ftp';
 import * as vscrw_fs_sftp from './fs/sftp';
 
 let isDeactivating = false;
 
 export function activate(context: vscode.ExtensionContext) {
+    vscrw_fs_ftp.FTPFileSystem.register( context );
     vscrw_fs_sftp.SFTPFileSystem.register( context );
 
 

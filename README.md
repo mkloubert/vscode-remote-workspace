@@ -12,8 +12,11 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
 ## Table of contents
 
 1. [Install](#install-)
-2. [Support and contribute](#support-and-contribute-)
-3. [Related projects](#related-projects-)
+2. [How to use](#how-to-use-)
+   * [FTP](#ftp-)
+   * [SFTP](#sftp-)
+3. [Support and contribute](#support-and-contribute-)
+4. [Related projects](#related-projects-)
    * [vscode-helpers](#vscode-helpers-)
 
 ## Install [[&uarr;](#table-of-contents)]
@@ -25,6 +28,48 @@ ext install vscode-remote-workspace
 ```
 
 Or search for things like `vscode-remote-workspace` in your editor.
+
+## How to use [[&uarr;](#table-of-contents)]
+
+Create (or update) a `.code-workspace` file and open it by using `Open Workspace...` in the GUI:
+
+```json
+{
+	"folders": [{
+        "uri": "sftp://my-user:my-password@example.com",
+        "name": "My SFTP folder"
+    }],
+	"settings": {}
+}
+```
+
+### FTP [[&uarr;](#how-to-use-)]
+
+URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
+
+```json
+{
+	"folders": [{
+        "uri": "ftp://my-user:my-password@ftp.example.com/",
+        "name": "My FTP folder"
+    }],
+	"settings": {}
+}
+```
+
+### SFTP [[&uarr;](#how-to-use-)]
+
+URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder]`
+
+```json
+{
+	"folders": [{
+        "uri": "sftp://my-user:my-password@sftp.example.com/",
+        "name": "My SFTP folder"
+    }],
+	"settings": {}
+}
+```
 
 ## Support and contribute [[&uarr;](#table-of-contents)]
 

@@ -18,6 +18,11 @@
 import * as vscode from 'vscode';
 
 /**
+ * An directory item.
+ */
+export type DirectoryEntry = [ string, vscode.FileType ];
+
+/**
  * SFTP file system.
  */
 export abstract class FileSystemBase implements vscode.FileSystemProvider {
@@ -49,7 +54,7 @@ export abstract class FileSystemBase implements vscode.FileSystemProvider {
     /**
      * @inheritdoc
      */
-    public abstract async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]>;
+    public abstract async readDirectory(uri: vscode.Uri): Promise<DirectoryEntry[]>;
 
     /**
      * @inheritdoc
