@@ -15,6 +15,7 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
 2. [How to use](#how-to-use-)
    * [Azure](#azure-)
      * [Remarks](#remarks-)
+   * [Dropbox](#dropbox-)
    * [FTP](#ftp-)
    * [S3 Buckets](#s3-buckets-)
      * [credential_type](#credential_type-)
@@ -80,6 +81,20 @@ For accessing local storage emulator, use something like that:
 
 If you create a new folder, a file called `.vscode-remote-workspace` with 0 size is created there, to keep sure to detect that new folder later.
 Before you delete that file, you should store another file there, otherwise the directory will disappear.
+
+### Dropbox [[&uarr;](#how-to-use-)]
+
+URL Format: `dropbox://token[/path/to/file/or/folder]`
+
+```json
+{
+    "folders": [{
+        "uri": "dropbox://<API-TOKEN>/",
+        "name": "My Dropbox folder"
+    }],
+    "settings": {}
+}
+```
 
 ### FTP [[&uarr;](#how-to-use-)]
 

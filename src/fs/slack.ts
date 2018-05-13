@@ -78,7 +78,7 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
         }
     }
 
-    public list(uri: vscode.Uri) {
+    private list(uri: vscode.Uri) {
         return this.forConnection(uri, (conn) => {
             return new Promise<SlackFile[]>(async (resolve, reject) => {
                 const ALL_FILES: SlackFile[] = [];
