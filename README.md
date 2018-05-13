@@ -38,11 +38,25 @@ Create (or update) a `.code-workspace` file and open it by using `Open Workspace
 
 ```json
 {
-	"folders": [{
+    "folders": [{
         "uri": "sftp://my-user:my-password@example.com",
         "name": "My SFTP folder"
     }],
-	"settings": {}
+    "settings": {}
+}
+```
+
+### FTP [[&uarr;](#how-to-use-)]
+
+URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
+
+```json
+{
+    "folders": [{
+        "uri": "ftp://my-user:my-password@ftp.example.com/",
+        "name": "My FTP folder"
+    }],
+    "settings": {}
 }
 ```
 
@@ -78,20 +92,6 @@ Default value: `shared`
 | `file` | If credential type is set to `file`, this defines the path to the `.json` file, which should be used. Relative paths will be mapped to the `.aws` sub folder inside the user's home directory. | `file=aws.json` |
 | `profile` | If credential type is set to `shared`, this defines the name of the section inside the `.ini` file, which should be used. Default: `default` | `profile=mkloubert` |
 | `var_prefix` | If credential type is set to `environment`, this defines the custom prefix for the environment variables (without `_` suffix!), which contain the credentials. Default: `AWS` | `var_prefix=MY_AWS_PREFIX` |
-
-### FTP [[&uarr;](#how-to-use-)]
-
-URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
-
-```json
-{
-    "folders": [{
-        "uri": "ftp://my-user:my-password@ftp.example.com/",
-        "name": "My FTP folder"
-    }],
-    "settings": {}
-}
-```
 
 ### SFTP [[&uarr;](#how-to-use-)]
 
