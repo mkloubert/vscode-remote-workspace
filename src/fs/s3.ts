@@ -303,7 +303,7 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
         switch (credentialType) {
             case 'environment':
                 {
-                    const VAR_NAME = vscode_helpers.toStringSafe( PARAMS['var_prefix'] ).toUpperCase().trim();
+                    const VAR_NAME = vscode_helpers.toStringSafe( PARAMS['varprefix'] ).toUpperCase().trim();
                     if ('' !== VAR_NAME) {
                         credentialConfig = VAR_NAME;
                     }

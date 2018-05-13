@@ -16,6 +16,8 @@
  */
 
 import * as _ from 'lodash';
+import * as FSExtra from 'fs-extra';
+import * as OS from 'os';
 import * as Path from 'path';
 import * as SFTP from 'ssh2-sftp-client';
 import * as vscode from 'vscode';
@@ -107,14 +109,53 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         //
         // sftp://[user:password@]host:port[/path/to/file/or/folder]
 
+        const PARAMS = vscrw.uriParamsToObject(uri);
+
         const NEW_CONNECTION: SFTPConnection = {
             client: new SFTP(),
         };
 
-        let username: string;
-        let password: string;
+        let agent = vscode_helpers.toStringSafe( PARAMS['agent'] );
+        let agentForward = vscode_helpers.normalizeString( PARAMS['agentforward'] );
+        let hashes = vscode_helpers.normalizeString( PARAMS['allowedhashes'] ).split(',').map(h => {
+            return h.trim();
+        }).filter(h => {
+            return '' !== h;
+        });
         let host: string;
+        let hostHash = vscode_helpers.normalizeString( PARAMS['hash'] );
+        let username: string;
+        let passphrase = vscode_helpers.toStringSafe( PARAMS['phrase'] );
+        let password: string;
         let port: number;
+        let readyTimeout = parseInt(
+            vscode_helpers.normalizeString( PARAMS['timeout'] )
+        );
+        let tryKeyboard = vscode_helpers.normalizeString( PARAMS['trykeyboard'] );
+
+        let privateKey: Buffer;
+        let key = vscode_helpers.toStringSafe( PARAMS['key'] );
+        if (!vscode_helpers.isEmptyString(key)) {
+            try {
+                let keyFile = key;
+                if (!Path.isAbsolute(keyFile)) {
+                    keyFile = Path.join(
+                        OS.homedir(),
+                        '.ssh',
+                        keyFile
+                    );
+                }
+                keyFile = Path.resolve( keyFile );
+
+                if (await vscode_helpers.isFile( keyFile )) {
+                    privateKey = await FSExtra.readFile( keyFile );
+                }
+            } catch { }
+
+            if (!privateKey) {
+                privateKey = new Buffer(key, 'base64');
+            }
+        }
 
         const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
         {
@@ -159,10 +200,30 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         }
 
         const OPTS = {
+            agent: vscode_helpers.isEmptyString(agent) ? undefined
+                                                       : agent,
+            agentForward: vscrw.isTrue(agentForward),
             host: host,
-            port: port,
-            username: username,
+            hostHash: <any>('' === hostHash ? 'md5' : hostHash),
+            hostVerifier: (keyHash) => {
+                if (hashes.length < 1) {
+                    return true;
+                }
+
+                return hashes.indexOf(
+                    vscode_helpers.normalizeString(keyHash)
+                ) > -1;
+            },
+            passphrase: '' === passphrase ? undefined
+                                          : passphrase,
             password: password,
+            privateKey: privateKey,
+            port: port,
+            readyTimeout: isNaN(readyTimeout) ? 20000
+                                              : readyTimeout,
+            tryKeyboard: '' === tryKeyboard ? undefined
+                                            : vscrw.isTrue(tryKeyboard),
+            username: username,
         };
 
         await NEW_CONNECTION.client.connect(

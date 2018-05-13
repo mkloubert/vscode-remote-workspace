@@ -21,8 +21,9 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
      * [credential_type](#credential_type-)
      * [Parameters](#parameters-)
    * [SFTP](#sftp-)
+     * [Parameters](#parameters--1)
    * [Slack](#slack-)
-     * [Remarks](#remarks-1-)
+     * [Remarks](#remarks--1)
 3. [Support and contribute](#support-and-contribute-)
 4. [Related projects](#related-projects-)
    * [vscode-helpers](#vscode-helpers-)
@@ -134,14 +135,14 @@ Default value: `shared`
 | `file` | Represents credentials from a JSON file on disk. | [FileSystemCredentials](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/FileSystemCredentials.html) |
 | `shared` | Represents credentials loaded from shared credentials file. | [SharedIniFileCredentials](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SharedIniFileCredentials.html) |
 
-##### Parameters [[&uarr;](#s3-buckets-)]
+#### Parameters [[&uarr;](#s3-buckets-)]
 
 | Name | Description | Example | 
 | ---- | --------- | --------- | 
 | `acl` | The [ACL](https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html) for new or updated files to use. Default: `private` | `acl=public-read` | 
 | `file` | If credential type is set to `file`, this defines the path to the `.json` file, which should be used. Relative paths will be mapped to the `.aws` sub folder inside the user's home directory. | `file=aws.json` |
 | `profile` | If credential type is set to `shared`, this defines the name of the section inside the `.ini` file, which should be used. Default: `default` | `profile=mkloubert` |
-| `var_prefix` | If credential type is set to `environment`, this defines the custom prefix for the environment variables (without `_` suffix!), which contain the credentials. Default: `AWS` | `var_prefix=MY_AWS_PREFIX` |
+| `varPrefix` | If credential type is set to `environment`, this defines the custom prefix for the environment variables (without `_` suffix!), which contain the credentials. Default: `AWS` | `varPrefix=MY_AWS_PREFIX` |
 
 ### SFTP [[&uarr;](#how-to-use-)]
 
@@ -156,6 +157,19 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder]`
     "settings": {}
 }
 ```
+
+#### Parameters [[&uarr;](#sftp-)]
+
+| Name | Description | Example | 
+| ---- | --------- | --------- | 
+| `agent` | Name or path to ssh-agent for ssh-agent-based user authentication. | `agent=myAgent` |
+| `agentForward` | Set to `(true)`, to use OpenSSH agent forwarding (auth-agent@openssh.com) for the life of the connection. Default: `(false)` | `agent=true` |
+| `allowedHashes` | Comma-separated list of hashes to verify. | `allowedHashes=md5,sha-1` |
+| `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |
+| `key` | The path to the key file or the [Base64](https://en.wikipedia.org/wiki/Base64) string with its content. Relative paths will be mapped to the sub folder `.ssh` inside the user's home directory. | `key=id_rsa` |
+| `phrase` | The passphrase for the key file, if needed. | `phrase=myPassphrase` |
+| `timeout` | How long (in milliseconds) to wait for the SSH handshake to complete. Default: `20000` | `timeout=60000` |
+| `tryKeyboard` | Try keyboard-interactive user authentication if primary user authentication method fails. Can be `0` or `1`. Default: `0` | `tryKeyboard=1` |
 
 ### Slack [[&uarr;](#how-to-use-)]
 

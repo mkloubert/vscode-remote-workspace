@@ -72,6 +72,19 @@ export function deactivate() {
 }
 
 /**
+ * Checks if a value represents (true).
+ *
+ * @param {any} value The value to check.
+ *
+ * @return {boolean} Represents (true) or not.
+ */
+export function isTrue(value: any) {
+    return (true === value) || ['1', 'true', 'y', 'yes'].indexOf(
+        vscode_helpers.normalizeString(value)
+    ) > -1;
+}
+
+/**
  * Normalizes a path.
  *
  * @param {string} p The path to normalize.
