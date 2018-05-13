@@ -20,6 +20,8 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
      * [credential_type](#credential_type-)
      * [Parameters](#parameters-)
    * [SFTP](#sftp-)
+   * [Slack](#slack-)
+     * [Remarks](#remarks-1-)
 3. [Support and contribute](#support-and-contribute-)
 4. [Related projects](#related-projects-)
    * [vscode-helpers](#vscode-helpers-)
@@ -139,6 +141,24 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder]`
     "settings": {}
 }
 ```
+
+### Slack [[&uarr;](#how-to-use-)]
+
+URL Format: `slack://token@channel[/]`
+
+```json
+{
+    "folders": [{
+        "uri": "slack://<API-TOKEN>@<CHANNEL-ID>",
+        "name": "My Slack channel"
+    }],
+    "settings": {}
+}
+```
+
+#### Remarks [[&uarr;](#slack-)]
+
+The protocol only supports read and list operations.
 
 ## Support and contribute [[&uarr;](#table-of-contents)]
 

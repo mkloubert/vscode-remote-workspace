@@ -2,7 +2,7 @@
     "name": "vscode-remote-workspace",
     "displayName": "Remote Workspace",
     "description": "Multi protocol support for handling remote files like local ones.",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "publisher": "mkloubert",
     "engines": {
         "vscode": "^1.23.0"
@@ -16,7 +16,7 @@
         "Remote",
         "S3",
         "SFTP",
-        "Workspaces",
+        "Slack",
         "multi-root ready"
     ],
     "activationEvents": [
@@ -27,7 +27,9 @@
         "onFileSystem:s3",
         "onFileSystemAccess:s3",
         "onFileSystem:sftp",
-        "onFileSystemAccess:sftp"
+        "onFileSystemAccess:sftp",
+        "onFileSystem:slack",
+        "onFileSystemAccess:slack"
     ],
     "main": "./out/extension",
     "contributes": {
@@ -74,6 +76,7 @@
         "vscode": "^1.1.6"
     },
     "dependencies": {
+        "@slack/client": "^4.2.2",
         "aws-sdk": "^2.238.1",
         "azure-storage": "^2.8.2",
         "jsftp": "^2.1.3",

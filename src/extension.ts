@@ -26,6 +26,7 @@ import * as vscrw_fs_azure from './fs/azure';
 import * as vscrw_fs_ftp from './fs/ftp';
 import * as vscrw_fs_s3 from './fs/s3';
 import * as vscrw_fs_sftp from './fs/sftp';
+import * as vscrw_fs_slack from './fs/slack';
 
 /**
  * A key value paris.
@@ -43,6 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscrw_fs_ftp.FTPFileSystem,
             vscrw_fs_azure.AzureBlobFileSystem,
             vscrw_fs_s3.S3FileSystem,
+            vscrw_fs_slack.SlackFileSystem,
         ];
 
         for (const C of CLASSES) {
