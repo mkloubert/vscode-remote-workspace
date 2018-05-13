@@ -1,8 +1,8 @@
 {
     "name": "vscode-remote-workspace",
     "displayName": "Remote Workspace",
-    "description": "Multi protocol support for handling remote files like local ones.",
-    "version": "0.8.0",
+    "description": "Multi protocol support (like Azure, Dropbox, S3, (S)FTP or Slack) for handling remote files like local ones.",
+    "version": "0.9.0",
     "publisher": "mkloubert",
     "engines": {
         "vscode": "^1.23.0"

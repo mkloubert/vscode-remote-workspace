@@ -44,6 +44,31 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
+    public async copy(source: vscode.Uri, destination: vscode.Uri, options: { overwrite: boolean }) {
+        await this.forConnection(source, async (conn) => {
+            const SRC_STAT = await this.statInner(source);
+
+            const DEST_STAT = await this.tryGetStat(source);
+            if (false !== DEST_STAT) {
+                if (options.overwrite) {
+                    await conn.client.filesDeleteV2({
+                        path: toDropboxPath(destination.path),
+                    });
+                } else {
+                    throw vscode.FileSystemError.FileExists( destination );
+                }
+            }
+
+            await conn.client.filesCopyV2({
+                from_path: toDropboxPath(source.path),
+                to_path: toDropboxPath(destination.path),
+            });
+        });
+    }
+
+    /**
+     * @inheritdoc
+     */
     public async createDirectory(uri: vscode.Uri) {
         await this.forConnection(uri, async (conn) => {
             const STAT = await this.tryGetStat(uri);
