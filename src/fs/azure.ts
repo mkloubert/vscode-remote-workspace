@@ -220,9 +220,12 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
         //
         // azure://[account:key@][container][/path/to/file/or/folder]
 
+        const PARAMS = vscrw.uriParamsToObject(uri);
+
         let account: string;
         let client: AzureStorage.BlobService;
         let container: string;
+        let host = vscode_helpers.toStringSafe( PARAMS['host'] ).trim();
         let key: string;
 
         const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
@@ -263,7 +266,8 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
                 key = undefined;
             }
 
-            client = AzureStorage.createBlobService(account, key);
+            client = AzureStorage.createBlobService(account, key,
+                                                    '' === host ? undefined : host);
         }
 
         if (vscode_helpers.isEmptyString(container)) {

@@ -14,14 +14,15 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
 1. [Install](#install-)
 2. [How to use](#how-to-use-)
    * [Azure](#azure-)
+     * [Parameters](#parameters-)
      * [Remarks](#remarks-)
    * [Dropbox](#dropbox-)
    * [FTP](#ftp-)
    * [S3 Buckets](#s3-buckets-)
      * [credential_type](#credential_type-)
-     * [Parameters](#parameters-)
-   * [SFTP](#sftp-)
      * [Parameters](#parameters--1)
+   * [SFTP](#sftp-)
+     * [Parameters](#parameters--2)
    * [Slack](#slack-)
      * [Remarks](#remarks--1)
 3. [Support and contribute](#support-and-contribute-)
@@ -77,6 +78,12 @@ For accessing local storage emulator, use something like that:
     "settings": {}
 }
 ```
+
+#### Parameters [[&uarr;](#azure-)]
+
+| Name | Description | Example | 
+| ---- | --------- | --------- | 
+| `host` | The custom host address. | `host=azure.example.com` | 
 
 #### Remarks [[&uarr;](#azure-)]
 
