@@ -13,6 +13,8 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
 
 1. [Install](#install-)
 2. [How to use](#how-to-use-)
+   * [Azure](#azure-)
+     * [Remarks](#remarks-)
    * [FTP](#ftp-)
    * [S3 Buckets](#s3-buckets-)
      * [credential_type](#credential_type-)
@@ -34,7 +36,7 @@ Or search for things like `vscode-remote-workspace` in your editor.
 
 ## How to use [[&uarr;](#table-of-contents)]
 
-Create (or update) a `.code-workspace` file and open it by using `Open Workspace...` in the GUI:
+Create (or update) a `.code-workspace` file and open it by using `File >> Open Workspace...` in the GUI:
 
 ```json
 {
@@ -45,6 +47,37 @@ Create (or update) a `.code-workspace` file and open it by using `Open Workspace
     "settings": {}
 }
 ```
+
+### Azure [[&uarr;](#how-to-use-)]
+
+URL Format: `azure://[account:key@][container][/path/to/file/or/folder]`
+
+```json
+{
+    "folders": [{
+        "uri": "azure://my-account:my-storage-key@my-container/",
+        "name": "My Azure folder"
+    }],
+    "settings": {}
+}
+```
+
+For accessing local storage emulator, use something like that:
+
+```json
+{
+    "folders": [{
+        "uri": "azure://mycontainer/",
+        "name": "My local Azure folder"
+    }],
+    "settings": {}
+}
+```
+
+#### Remarks [[&uarr;](#azure-)]
+
+If you create a new folder, a file called `.vscode-remote-workspace` with 0 size is created there, to keep sure to detect that new folder later.
+Before you delete that file, you should store another file there, otherwise the directory will disappear.
 
 ### FTP [[&uarr;](#how-to-use-)]
 

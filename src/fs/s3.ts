@@ -103,8 +103,12 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                     return SELF_PATH !== x.Key;
                 });
 
+                const HAS_SUB_DIRS = (await this.readDirectory(uri)).filter(e => {
+                    return vscode.FileType.Directory === e[1];
+                }).length > 0;
+
                 if (!options.recursive) {
-                    if (SUB_ITEMS.length > 0) {
+                    if (HAS_SUB_DIRS) {
                         throw vscode.FileSystemError.NoPermissions( uri );
                     }
                 }
@@ -417,10 +421,12 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                     throw vscode.FileSystemError.FileExists( newUri );
                 }
 
-                await conn.client.deleteObject({
-                    Bucket: undefined,
-                    Key: vscrw.normalizePath(newUri.path),
-                }).promise();
+                if (vscode.FileType.File === NEW_STAT.type) {
+                    await conn.client.deleteObject({
+                        Bucket: this.getBucket(newUri),
+                        Key: toS3Path(newUri.path),
+                    }).promise();
+                }
             }
 
             const ITEMS_TO_MOVE: {

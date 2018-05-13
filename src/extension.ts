@@ -22,6 +22,7 @@ import * as Path from 'path';
 import * as URL from 'url';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
+import * as vscrw_fs_azure from './fs/azure';
 import * as vscrw_fs_ftp from './fs/ftp';
 import * as vscrw_fs_s3 from './fs/s3';
 import * as vscrw_fs_sftp from './fs/sftp';
@@ -33,10 +34,29 @@ export type KeyValuePairs<TValue = any> = { [key: string]: TValue };
 
 let isDeactivating = false;
 
-export function activate(context: vscode.ExtensionContext) {
-    vscrw_fs_ftp.FTPFileSystem.register( context );
-    vscrw_fs_s3.S3FileSystem.register( context );
-    vscrw_fs_sftp.SFTPFileSystem.register( context );
+export async function activate(context: vscode.ExtensionContext) {
+    const WF = vscode_helpers.buildWorkflow();
+
+    WF.next(() => {
+        const CLASSES = [
+            vscrw_fs_sftp.SFTPFileSystem,
+            vscrw_fs_ftp.FTPFileSystem,
+            vscrw_fs_azure.AzureBlobFileSystem,
+            vscrw_fs_s3.S3FileSystem,
+        ];
+
+        for (const C of CLASSES) {
+            try {
+                C.register( context );
+            } catch (e) {
+                showError(e);
+            }
+        }
+    });
+
+    if (!isDeactivating) {
+        await WF.start();
+    }
 }
 
 export function deactivate() {
