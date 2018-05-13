@@ -9,6 +9,8 @@
 
 Multi protocol support for handling remote files like local ones in [Visual Studio Code](https://code.visualstudio.com).
 
+![Demo 1](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/demo1.gif)
+
 ## Table of contents
 
 1. [Install](#install-)
