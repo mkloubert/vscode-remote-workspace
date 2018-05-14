@@ -175,24 +175,32 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                                 };
                             });
 
+                            const SUB_DIRS = vscode_helpers.from(LIST)
+                                                           .where(x => vscode.FileType.Directory === x.stat.type)
+                                                           .orderByDescending(x => x.stat.size)
+                                                           .thenBy(x => vscode_helpers.normalizeString(x))
+                                                           .toArray();
+
+                            const FILES = vscode_helpers.from(LIST)
+                                                        .where(x => vscode.FileType.Directory !== x.stat.type)
+                                                        .orderByDescending(x => x.stat.size)
+                                                        .thenBy(x => vscode_helpers.normalizeString(x))
+                                                        .toArray();
+
                             // first the sub folders
                             if (options.recursive) {
-                                const SUB_DIRS = vscode_helpers.from(LIST)
-                                                               .where(x => vscode.FileType.Directory === x.stat.type)
-                                                               .orderByDescending(x => x.stat.size)
-                                                               .thenBy(x => vscode_helpers.normalizeString(x));
                                 for (const ITEM of SUB_DIRS) {
                                     await REMOVE_FOLDER(
                                         dir + '/' + ITEM.name
                                     );
                                 }
+                            } else {
+                                if (SUB_DIRS.length > 0) {
+                                    throw vscode.FileSystemError.NoPermissions( uri );
+                                }
                             }
 
                             // then the files
-                            const FILES = vscode_helpers.from(LIST)
-                                                        .where(x => vscode.FileType.File === x.stat.type)
-                                                        .orderByDescending(x => x.stat.size)
-                                                        .thenBy(x => vscode_helpers.normalizeString(x));
                             for (const ITEM of FILES) {
                                 await DELE(
                                     dir + '/' + ITEM.name

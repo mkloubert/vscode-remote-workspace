@@ -58,26 +58,17 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public async delete(uri: vscode.Uri, options: { recursive: boolean }) {
         await this.forConnection(uri, async (conn) => {
-            const STAT = await this.tryGetStat( uri );
-            if (false !== STAT) {
-                if (vscode.FileType.Directory === STAT.type) {
-                    await conn.client.rmdir(
-                        vscrw.normalizePath(uri.path), options.recursive
-                    );
-                } else {
-                    await conn.client.delete(
-                        vscrw.normalizePath(uri.path)
-                    );
-                }
+            const STAT = await this.statInner( uri, conn );
 
-                if (vscode.FileType.Directory === STAT.type) {
-                    throw vscode.FileSystemError.FileExists( uri );
-                } else {
-                    throw vscode.FileSystemError.NoPermissions( uri );
-                }
+            if (vscode.FileType.Directory === STAT.type) {
+                await conn.client.rmdir(
+                    vscrw.normalizePath(uri.path), options.recursive
+                );
+            } else {
+                await conn.client.delete(
+                    vscrw.normalizePath(uri.path)
+                );
             }
-
-            throw vscode.FileSystemError.FileNotFound( uri );
         });
     }
 
