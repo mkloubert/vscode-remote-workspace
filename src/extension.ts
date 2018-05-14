@@ -72,6 +72,24 @@ export function deactivate() {
 }
 
 /**
+ * Generates a connection cache key from an URI.
+ *
+ * @param {vscode.Uri} uri The URI.
+ *
+ * @return {string} The generated key.
+ */
+export function getConnectionCacheKey(uri: vscode.Uri): string {
+    if (_.isNil(uri)) {
+        return <any>uri;
+    }
+
+    return `${ vscode_helpers.normalizeString(uri.scheme) }\n` +
+           `${ vscode_helpers.toStringSafe(uri.authority) }\n` +
+           `${ JSON.stringify( uriParamsToObject( uri ) ) }\n` +
+           `${ vscode_helpers.normalizeString(uri.fragment) }`;
+}
+
+/**
  * Checks if a value represents (true).
  *
  * @param {any} value The value to check.

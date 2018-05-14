@@ -39,6 +39,8 @@ interface FTPDirectoryItem {
  * FTP file system.
  */
 export class FTPFileSystem extends vscrw_fs.FileSystemBase {
+    private readonly _CONN_CACHE: any = {};
+
     /**
      * @inheritdoc
      */
@@ -230,18 +232,11 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
         const CONN = USE_EXISTING_CONN ? existingConn
                                        : await this.openConnection(uri);
-        try {
-            if (action) {
-                return await Promise.resolve(
-                    action( CONN )
-                );
-            }
-        } finally {
-            if (!USE_EXISTING_CONN) {
-                try {
-                    CONN.client.destroy();
-                } catch { }
-            }
+
+        if (action) {
+            return await Promise.resolve(
+                action( CONN )
+            );
         }
     }
 
@@ -283,66 +278,88 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
         }, existingConn);
     }
 
+    /**
+     * @inheritdoc
+     */
+    protected onDispose() {
+        for (const CACHE_KEY of Object.keys(this._CONN_CACHE)) {
+            try {
+                tryCloseConnection(
+                    this._CONN_CACHE[ CACHE_KEY ]
+                );
+            } catch { } finally {
+                delete this._CONN_CACHE[ CACHE_KEY ];
+            }
+        }
+    }
+
     private async openConnection(uri: vscode.Uri): Promise<FTPConnection> {
         // format:
         //
         // ftp://[user:password@]host:port[/path/to/file/or/folder]
 
-        let username: string;
-        let password: string;
-        let host: string;
-        let port: number;
+        const CACHE_KEY = vscrw.getConnectionCacheKey( uri );
 
-        const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
-        {
-            const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
-            if (AUTH_HOST_SEP > -1) {
-                const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-                const USER_AND_PWD = AUTHORITITY.substr(0, AUTH_HOST_SEP);
+        let conn = await this.testConnection( CACHE_KEY );
+        if (false === conn) {
+            let username: string;
+            let password: string;
+            let host: string;
+            let port: number;
 
-                const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
-                if (HOST_PORT_SEP > -1) {
-                    host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
-                    port = parseInt(
-                        HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
-                    );
+            const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
+            {
+                const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
+                if (AUTH_HOST_SEP > -1) {
+                    const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
+                    const USER_AND_PWD = AUTHORITITY.substr(0, AUTH_HOST_SEP);
+
+                    const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
+                    if (HOST_PORT_SEP > -1) {
+                        host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
+                        port = parseInt(
+                            HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
+                        );
+                    } else {
+                        host = HOST_AND_PORT;
+                    }
+
+                    const USER_AND_PWD_SEP = USER_AND_PWD.indexOf( ':' );
+                    if (USER_AND_PWD_SEP > -1) {
+                        username = USER_AND_PWD.substr(0, USER_AND_PWD_SEP);
+                        password = USER_AND_PWD.substr(USER_AND_PWD_SEP + 1);
+                    } else {
+                        username = USER_AND_PWD;
+                    }
                 } else {
-                    host = HOST_AND_PORT;
+                    host = AUTHORITITY;
                 }
-
-                const USER_AND_PWD_SEP = USER_AND_PWD.indexOf( ':' );
-                if (USER_AND_PWD_SEP > -1) {
-                    username = USER_AND_PWD.substr(0, USER_AND_PWD_SEP);
-                    password = USER_AND_PWD.substr(USER_AND_PWD_SEP + 1);
-                } else {
-                    username = USER_AND_PWD;
-                }
-            } else {
-                host = AUTHORITITY;
             }
+
+            if (vscode_helpers.isEmptyString( host )) {
+                host = '127.0.0.1';
+            }
+            if (isNaN( port )) {
+                port = 21;
+            }
+            if (vscode_helpers.isEmptyString( username )) {
+                username = undefined;
+            }
+            if ('' === vscode_helpers.toStringSafe( password )) {
+                password = undefined;
+            }
+
+            this._CONN_CACHE[ CACHE_KEY ] = conn = {
+                client: new jsFTP({
+                    host: host,
+                    port: port,
+                    user: username,
+                    pass: password,
+                }),
+            };
         }
 
-        if (vscode_helpers.isEmptyString( host )) {
-            host = '127.0.0.1';
-        }
-        if (isNaN( port )) {
-            port = 21;
-        }
-        if (vscode_helpers.isEmptyString( username )) {
-            username = undefined;
-        }
-        if ('' === vscode_helpers.toStringSafe( password )) {
-            password = undefined;
-        }
-
-        return {
-            client: new jsFTP({
-                host: host,
-                port: port,
-                user: username,
-                pass: password,
-            }),
-        };
+        return conn;
     }
 
     /**
@@ -435,10 +452,14 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
      * @param {vscode.ExtensionContext} context The extension context.
      */
     public static register(context: vscode.ExtensionContext) {
+        const NEW_FS = new FTPFileSystem();
+
         context.subscriptions.push(
+            NEW_FS,
+
             vscode.workspace.registerFileSystemProvider('ftp',
-                                                        new FTPFileSystem(),
-                                                        { isCaseSensitive: true })
+                                                        NEW_FS,
+                                                        { isCaseSensitive: true }),
         );
     }
 
@@ -512,6 +533,48 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
         }
 
         return stat;
+    }
+
+    private async testConnection(cacheKey: string) {
+        return new Promise<FTPConnection | false>((resolve, reject) => {
+            const CONN: FTPConnection = this._CONN_CACHE[ cacheKey ];
+
+            let completedInvoked = false;
+            const COMPLETED = (result: FTPConnection | false) => {
+                if (completedInvoked) {
+                    return;
+                }
+                completedInvoked = true;
+
+                if (false === result) {
+                    delete this._CONN_CACHE[ cacheKey ];
+
+                    tryCloseConnection( CONN );
+                }
+
+                resolve( result );
+            };
+
+            let action = () => {
+                COMPLETED(false);
+            };
+
+            try {
+                if (!_.isNil(CONN)) {
+                    action = () => {
+                        try {
+                            CONN.client.raw('NOOP', [], (err) => {
+                                COMPLETED(err ? false : CONN);
+                            });
+                        } catch {
+                            COMPLETED(false);
+                        }
+                    };
+                }
+            } catch { }
+
+            action();
+        });
     }
 
     private async tryGetStat(uri: vscode.Uri, existingConn?: FTPConnection): Promise<vscode.FileStat | false> {
@@ -606,6 +669,18 @@ function toFileStat(item: FTPDirectoryItem): vscode.FileStat {
         }
 
         return STAT;
+    }
+}
+
+function tryCloseConnection(conn: FTPConnection) {
+    try {
+        if (conn) {
+            conn.client.destroy();
+        }
+
+        return true;
+    } catch {
+        return false;
     }
 }
 
