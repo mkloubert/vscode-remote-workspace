@@ -78,23 +78,15 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         uri: vscode.Uri, action: (conn: SFTPConnection) => TResult | PromiseLike<TResult>,
         existingConn?: SFTPConnection
     ): Promise<TResult> {
-        try {
-            const USE_EXISTING_CONN = !_.isNil( existingConn );
+        const USE_EXISTING_CONN = !_.isNil( existingConn );
 
-            const CONN = USE_EXISTING_CONN ? existingConn
-                                           : await this.openConnection(uri);
+        const CONN = USE_EXISTING_CONN ? existingConn
+                                       : await this.openConnection(uri);
 
-            if (action) {
-                return await Promise.resolve(
-                    action( CONN )
-                );
-            }
-        } catch (e) {
-            await this.tryCloseAndDeleteConnection(
-                vscrw.getConnectionCacheKey( uri )
+        if (action) {
+            return await Promise.resolve(
+                action( CONN )
             );
-
-            throw e;
         }
     }
 
@@ -396,8 +388,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         }
 
         if (false === result) {
-            await tryCloseConnection( CONN );
-            delete this._CONN_CACHE[ cacheKey ];
+            await this.tryCloseAndDeleteConnection( cacheKey );
         }
 
         return result;
