@@ -123,13 +123,6 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 client: new SFTP(),
             };
 
-            (<any>conn['client']).on('close', () => {
-                this.tryCloseAndDeleteConnectionSync( CACHE_KEY );
-            });
-            (<any>conn['client']).on('end', () => {
-                this.tryCloseAndDeleteConnectionSync( CACHE_KEY );
-            });
-
             let agent = vscode_helpers.toStringSafe( PARAMS['agent'] );
             let agentForward = vscode_helpers.normalizeString( PARAMS['agentforward'] );
             let hashes = vscode_helpers.normalizeString( PARAMS['allowedhashes'] ).split(',').map(h => {
@@ -391,7 +384,15 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
 
         const CONN: SFTPConnection = this._CONN_CACHE[ cacheKey ];
         if (!_.isNil(CONN)) {
-            result = CONN;
+            try {
+                // TODO: remove this with a better and faster
+                // operation like NOOP from FTP
+                await CONN.client.list('/');
+
+                result = CONN;
+            } catch {
+                result = false;
+            }
         }
 
         if (false === result) {
