@@ -33,6 +33,8 @@ interface SFTPConnection {
  * SFTP file system.
  */
 export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
+    private readonly _CONN_CACHE: any = {};
+
     /**
      * @inheritdoc
      */
@@ -76,22 +78,32 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         uri: vscode.Uri, action: (conn: SFTPConnection) => TResult | PromiseLike<TResult>,
         existingConn?: SFTPConnection
     ): Promise<TResult> {
-        const USE_EXISTING_CONN = !_.isNil( existingConn );
-
-        const CONN = USE_EXISTING_CONN ? existingConn
-                                       : await this.openConnection(uri);
         try {
+            const USE_EXISTING_CONN = !_.isNil( existingConn );
+
+            const CONN = USE_EXISTING_CONN ? existingConn
+                                           : await this.openConnection(uri);
+
             if (action) {
                 return await Promise.resolve(
                     action( CONN )
                 );
             }
-        } finally {
-            if (!USE_EXISTING_CONN) {
-                try {
-                    await CONN.client.end();
-                } catch { }
-            }
+        } catch (e) {
+            await this.tryCloseAndDeleteConnection(
+                vscrw.getConnectionCacheKey( uri )
+            );
+
+            throw e;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected onDispose() {
+        for (const CACHE_KEY of Object.keys(this._CONN_CACHE)) {
+            this.tryCloseAndDeleteConnectionSync( CACHE_KEY );
         }
     }
 
@@ -100,128 +112,144 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         //
         // sftp://[user:password@]host:port[/path/to/file/or/folder]
 
+        const CACHE_KEY = vscrw.getConnectionCacheKey( uri );
+
         const PARAMS = vscrw.uriParamsToObject(uri);
 
-        const NEW_CONNECTION: SFTPConnection = {
-            client: new SFTP(),
-        };
+        let conn = await this.testConnection( CACHE_KEY );
 
-        let agent = vscode_helpers.toStringSafe( PARAMS['agent'] );
-        let agentForward = vscode_helpers.normalizeString( PARAMS['agentforward'] );
-        let hashes = vscode_helpers.normalizeString( PARAMS['allowedhashes'] ).split(',').map(h => {
-            return h.trim();
-        }).filter(h => {
-            return '' !== h;
-        });
-        let host: string;
-        let hostHash = vscode_helpers.normalizeString( PARAMS['hash'] );
-        let username: string;
-        let passphrase = vscode_helpers.toStringSafe( PARAMS['phrase'] );
-        let password: string;
-        let port: number;
-        let readyTimeout = parseInt(
-            vscode_helpers.normalizeString( PARAMS['timeout'] )
-        );
-        let tryKeyboard = vscode_helpers.normalizeString( PARAMS['trykeyboard'] );
+        if (false === conn) {
+            conn = {
+                client: new SFTP(),
+            };
 
-        let privateKey: Buffer;
-        let key = vscode_helpers.toStringSafe( PARAMS['key'] );
-        if (!vscode_helpers.isEmptyString(key)) {
-            try {
-                let keyFile = key;
-                if (!Path.isAbsolute(keyFile)) {
-                    keyFile = Path.join(
-                        OS.homedir(),
-                        '.ssh',
-                        keyFile
-                    );
+            (<any>conn['client']).on('close', () => {
+                this.tryCloseAndDeleteConnectionSync( CACHE_KEY );
+            });
+            (<any>conn['client']).on('end', () => {
+                this.tryCloseAndDeleteConnectionSync( CACHE_KEY );
+            });
+
+            let agent = vscode_helpers.toStringSafe( PARAMS['agent'] );
+            let agentForward = vscode_helpers.normalizeString( PARAMS['agentforward'] );
+            let hashes = vscode_helpers.normalizeString( PARAMS['allowedhashes'] ).split(',').map(h => {
+                return h.trim();
+            }).filter(h => {
+                return '' !== h;
+            });
+            let host: string;
+            let hostHash = vscode_helpers.normalizeString( PARAMS['hash'] );
+            let username: string;
+            let passphrase = vscode_helpers.toStringSafe( PARAMS['phrase'] );
+            let password: string;
+            let port: number;
+            let readyTimeout = parseInt(
+                vscode_helpers.normalizeString( PARAMS['timeout'] )
+            );
+            let tryKeyboard = vscode_helpers.normalizeString( PARAMS['trykeyboard'] );
+
+            let privateKey: Buffer;
+            let key = vscode_helpers.toStringSafe( PARAMS['key'] );
+            if (!vscode_helpers.isEmptyString(key)) {
+                try {
+                    let keyFile = key;
+                    if (!Path.isAbsolute(keyFile)) {
+                        keyFile = Path.join(
+                            OS.homedir(),
+                            '.ssh',
+                            keyFile
+                        );
+                    }
+                    keyFile = Path.resolve( keyFile );
+
+                    if (await vscode_helpers.isFile( keyFile )) {
+                        privateKey = await FSExtra.readFile( keyFile );
+                    }
+                } catch { }
+
+                if (!privateKey) {
+                    privateKey = new Buffer(key, 'base64');
                 }
-                keyFile = Path.resolve( keyFile );
-
-                if (await vscode_helpers.isFile( keyFile )) {
-                    privateKey = await FSExtra.readFile( keyFile );
-                }
-            } catch { }
-
-            if (!privateKey) {
-                privateKey = new Buffer(key, 'base64');
             }
-        }
 
-        const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
-        {
-            const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
-            if (AUTH_HOST_SEP > -1) {
-                const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-                const USER_AND_PWD = AUTHORITITY.substr(0, AUTH_HOST_SEP);
+            const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
+            {
+                const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
+                if (AUTH_HOST_SEP > -1) {
+                    const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
+                    const USER_AND_PWD = AUTHORITITY.substr(0, AUTH_HOST_SEP);
 
-                const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
-                if (HOST_PORT_SEP > -1) {
-                    host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
-                    port = parseInt(
-                        HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
-                    );
+                    const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
+                    if (HOST_PORT_SEP > -1) {
+                        host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
+                        port = parseInt(
+                            HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
+                        );
+                    } else {
+                        host = HOST_AND_PORT;
+                    }
+
+                    const USER_AND_PWD_SEP = USER_AND_PWD.indexOf( ':' );
+                    if (USER_AND_PWD_SEP > -1) {
+                        username = USER_AND_PWD.substr(0, USER_AND_PWD_SEP);
+                        password = USER_AND_PWD.substr(USER_AND_PWD_SEP + 1);
+                    } else {
+                        username = USER_AND_PWD;
+                    }
                 } else {
-                    host = HOST_AND_PORT;
+                    host = AUTHORITITY;
                 }
-
-                const USER_AND_PWD_SEP = USER_AND_PWD.indexOf( ':' );
-                if (USER_AND_PWD_SEP > -1) {
-                    username = USER_AND_PWD.substr(0, USER_AND_PWD_SEP);
-                    password = USER_AND_PWD.substr(USER_AND_PWD_SEP + 1);
-                } else {
-                    username = USER_AND_PWD;
-                }
-            } else {
-                host = AUTHORITITY;
             }
+
+            if (vscode_helpers.isEmptyString( host )) {
+                host = '127.0.0.1';
+            }
+            if (isNaN( port )) {
+                port = 22;
+            }
+            if (vscode_helpers.isEmptyString( username )) {
+                username = undefined;
+            }
+            if ('' === vscode_helpers.toStringSafe( password )) {
+                password = undefined;
+            }
+
+            const OPTS = {
+                agent: vscode_helpers.isEmptyString(agent) ? undefined
+                                                        : agent,
+                agentForward: vscrw.isTrue(agentForward),
+                host: host,
+                hostHash: <any>('' === hostHash ? 'md5' : hostHash),
+                hostVerifier: (keyHash) => {
+                    if (hashes.length < 1) {
+                        return true;
+                    }
+
+                    return hashes.indexOf(
+                        vscode_helpers.normalizeString(keyHash)
+                    ) > -1;
+                },
+                passphrase: '' === passphrase ? undefined
+                                            : passphrase,
+                password: password,
+                privateKey: privateKey,
+                port: port,
+                readyTimeout: isNaN(readyTimeout) ? 20000
+                                                : readyTimeout,
+                tryKeyboard: '' === tryKeyboard ? undefined
+                                                : vscrw.isTrue(tryKeyboard),
+                username: username,
+            };
+
+            await this.tryCloseAndDeleteConnection( CACHE_KEY );
+
+            await conn.client.connect(
+                OPTS
+            );
+            this._CONN_CACHE[ CACHE_KEY ] = conn;
         }
 
-        if (vscode_helpers.isEmptyString( host )) {
-            host = '127.0.0.1';
-        }
-        if (isNaN( port )) {
-            port = 22;
-        }
-        if (vscode_helpers.isEmptyString( username )) {
-            username = undefined;
-        }
-        if ('' === vscode_helpers.toStringSafe( password )) {
-            password = undefined;
-        }
-
-        const OPTS = {
-            agent: vscode_helpers.isEmptyString(agent) ? undefined
-                                                       : agent,
-            agentForward: vscrw.isTrue(agentForward),
-            host: host,
-            hostHash: <any>('' === hostHash ? 'md5' : hostHash),
-            hostVerifier: (keyHash) => {
-                if (hashes.length < 1) {
-                    return true;
-                }
-
-                return hashes.indexOf(
-                    vscode_helpers.normalizeString(keyHash)
-                ) > -1;
-            },
-            passphrase: '' === passphrase ? undefined
-                                          : passphrase,
-            password: password,
-            privateKey: privateKey,
-            port: port,
-            readyTimeout: isNaN(readyTimeout) ? 20000
-                                              : readyTimeout,
-            tryKeyboard: '' === tryKeyboard ? undefined
-                                            : vscrw.isTrue(tryKeyboard),
-            username: username,
-        };
-
-        await NEW_CONNECTION.client.connect(
-            OPTS
-        );
-
-        return NEW_CONNECTION;
+        return conn;
     }
 
     /**
@@ -358,6 +386,38 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         }, existingConn);
     }
 
+    private async testConnection(cacheKey: string): Promise<SFTPConnection | false> {
+        let result: SFTPConnection | false = false;
+
+        const CONN: SFTPConnection = this._CONN_CACHE[ cacheKey ];
+        if (!_.isNil(CONN)) {
+            result = CONN;
+        }
+
+        if (false === result) {
+            await tryCloseConnection( CONN );
+            delete this._CONN_CACHE[ cacheKey ];
+        }
+
+        return result;
+    }
+
+    private async tryCloseAndDeleteConnection(cacheKey: string) {
+        await tryCloseConnection(
+            this._CONN_CACHE[ cacheKey ]
+        );
+
+        delete this._CONN_CACHE[ cacheKey ];
+    }
+
+    private tryCloseAndDeleteConnectionSync(cacheKey: string) {
+        this.tryCloseAndDeleteConnection(
+            cacheKey
+        ).then(() => {
+        }, (err) => {
+        });
+    }
+
     private async tryGetStat(uri: vscode.Uri, existingConn?: SFTPConnection): Promise<vscode.FileStat | false> {
         let stat: vscode.FileStat | false;
         try {
@@ -429,5 +489,17 @@ function toFileStat(fi: SFTP.FileInfo): [ string, vscode.FileStat ] {
         }
 
         return [ fi.name, STAT ];
+    }
+}
+
+async function tryCloseConnection(conn: SFTPConnection) {
+    try {
+        if (conn) {
+            await conn.client.end();
+        }
+
+        return true;
+    } catch {
+        return false;
     }
 }

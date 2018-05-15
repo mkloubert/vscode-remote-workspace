@@ -349,6 +349,7 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 password = undefined;
             }
 
+            tryCloseConnection( this._CONN_CACHE[ CACHE_KEY ] );
             this._CONN_CACHE[ CACHE_KEY ] = conn = {
                 client: new jsFTP({
                     host: host,
@@ -559,21 +560,23 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 COMPLETED(false);
             };
 
-            try {
-                if (!_.isNil(CONN)) {
-                    action = () => {
-                        try {
-                            CONN.client.raw('NOOP', [], (err) => {
-                                COMPLETED(err ? false : CONN);
-                            });
-                        } catch {
-                            COMPLETED(false);
-                        }
-                    };
-                }
-            } catch { }
+            if (!_.isNil(CONN)) {
+                action = () => {
+                    try {
+                        CONN.client.raw('NOOP', [], (err) => {
+                            COMPLETED(err ? false : CONN);
+                        });
+                    } catch {
+                        COMPLETED(false);
+                    }
+                };
+            }
 
-            action();
+            try {
+                action();
+            } catch {
+                COMPLETED(false);
+            }
         });
     }
 
