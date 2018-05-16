@@ -17,8 +17,7 @@
         "S3",
         "SFTP",
         "Slack",
-        "WebDAV",
-        "multi-root ready"
+        "WebDAV"
     ],
     "activationEvents": [
         "onFileSystem:azure",
