@@ -28,6 +28,7 @@ import * as vscrw_fs_ftp from './fs/ftp';
 import * as vscrw_fs_s3 from './fs/s3';
 import * as vscrw_fs_sftp from './fs/sftp';
 import * as vscrw_fs_slack from './fs/slack';
+import * as vscrw_fs_webdav from './fs/webdav';
 
 /**
  * A key value paris.
@@ -47,6 +48,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscrw_fs_azure.AzureBlobFileSystem,
             vscrw_fs_s3.S3FileSystem,
             vscrw_fs_slack.SlackFileSystem,
+            vscrw_fs_webdav.WebDAVFileSystem,
         ];
 
         for (const C of CLASSES) {

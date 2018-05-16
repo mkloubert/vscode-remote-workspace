@@ -27,6 +27,8 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
      * [Parameters](#parameters--2)
    * [Slack](#slack-)
      * [Remarks](#remarks--1)
+   * [WebDAV](#webdav-)
+     * [Parameters](#parameters--3)
 3. [Support and contribute](#support-and-contribute-)
 4. [Related projects](#related-projects-)
    * [vscode-helpers](#vscode-helpers-)
@@ -197,6 +199,27 @@ URL Format: `slack://token@channel[/]`
 #### Remarks [[&uarr;](#slack-)]
 
 The protocol only supports read and list operations.
+
+### WebDAV [[&uarr;](#how-to-use-)]
+
+URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?option1=value1&option2=value2]`
+
+```json
+{
+    "folders": [{
+        "uri": "webdav://myUser:myPassword@webdav.example.com/?ssl=1",
+        "name": "My WebDAV server"
+    }],
+    "settings": {}
+}
+```
+
+#### Parameters [[&uarr;](#webdav-)]
+
+| Name | Description | Example | 
+| ---- | --------- | --------- | 
+| `base` | The base path, that is used as prefix for all requests. | `base=nextcloud/remote.php/webdav/` |
+| `ssl` | Use secure HTTP or not. Can be `0` or `1`. Default: `0` | `ssl=1` |
 
 ## Support and contribute [[&uarr;](#table-of-contents)]
 
