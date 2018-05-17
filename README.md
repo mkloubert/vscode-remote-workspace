@@ -174,7 +174,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 | Name | Description | Example | 
 | ---- | --------- | --------- | 
 | `agent` | Name or path to ssh-agent for ssh-agent-based user authentication. | `agent=myAgent` |
-| `agentForward` | Set to `(true)`, to use OpenSSH agent forwarding (auth-agent@openssh.com) for the life of the connection. Default: `(false)` | `agent=true` |
+| `agentForward` | Set to `(true)`, to use OpenSSH agent forwarding (`auth-agent@openssh.com`) for the life of the connection. Default: `(false)` | `agentForward=true` |
 | `allowedHashes` | Comma-separated list of hashes to verify. | `allowedHashes=md5,sha-1` |
 | `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |
 | `key` | The path to the key file or the [Base64](https://en.wikipedia.org/wiki/Base64) string with its content. Relative paths will be mapped to the sub folder `.ssh` inside the user's home directory. | `key=id_rsa` |

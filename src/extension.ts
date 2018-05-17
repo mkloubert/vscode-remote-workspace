@@ -152,16 +152,7 @@ export async function showError(err): Promise<string | undefined> {
  * @return {Uint8Array} The output value.
  */
 export function toUInt8Array(buff: Buffer): Uint8Array {
-    if (_.isNil(buff)) {
-        return <any>buff;
-    }
-
-    const ARR = new Uint8Array( buff.length );
-    for (let i = 0; i < buff.length; i++) {
-        ARR[i] = buff.readUInt8(i);
-    }
-
-    return ARR;
+    return buff;
 }
 
 /**
