@@ -779,6 +779,10 @@ async function toFileStat(item: FTPDirectoryItem, uri: vscode.Uri, conn: FTPConn
                                     conn.cache.stats[ FILE_OR_FOLDER ] = STAT.type = type;
                                 }
                                 */
+
+                                if (false !== type) {
+                                    STAT.type = type;
+                                }
                             }
                         } catch {
                             STAT.type = vscode.FileType.SymbolicLink;

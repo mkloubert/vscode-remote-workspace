@@ -551,6 +551,10 @@ async function toFileStat(fi: SFTP.FileInfo, uri: vscode.Uri, conn: SFTPConnecti
                             conn.cache.stats[ FILE_OR_FOLDER ] = STAT.type = type;
                         }
                         */
+
+                        if (false !== type) {
+                            STAT.type = type;
+                        }
                     } else {
                         STAT.type = CACHED_VALUE;
                     }
