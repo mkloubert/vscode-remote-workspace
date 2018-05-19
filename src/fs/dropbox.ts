@@ -16,7 +16,8 @@
  */
 
 import * as Dropbox from 'dropbox';
-const IsomorphicFetch = require('isomorphic-fetch');
+import * as FSExtra from 'fs-extra';
+const IsomorphicFetch = require('isomorphic-fetch');  // REQUIRED EXTENSION FOR dropbox MODULE!!!
 import * as Moment from 'moment';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
@@ -164,9 +165,26 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
         //
         // dropbox://token[/path/to/file/or/folder]
 
-        let accessToken: string = vscode_helpers.toStringSafe(
-            uri.authority
-        ).trim();
+        const PARAMS = vscrw.uriParamsToObject(uri);
+
+        let accessToken: string | false = false;
+        {
+            // external auth file?
+            let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
+            if (!vscode_helpers.isEmptyString(authFile)) {
+                authFile = vscrw.mapToUsersHome( authFile );
+
+                if (await vscode_helpers.isFile(authFile)) {
+                    accessToken = (await FSExtra.readFile(authFile, 'utf8')).trim();
+                }
+            }
+        }
+
+        if (false === accessToken) {
+            accessToken = vscode_helpers.toStringSafe(
+                uri.authority
+            ).trim();
+        }
 
         if (vscode_helpers.isEmptyString(accessToken)) {
             accessToken = undefined;
@@ -174,7 +192,7 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
 
         return {
             client: new Dropbox.Dropbox({
-                accessToken: accessToken
+                accessToken: <string>accessToken
             }),
         };
     }

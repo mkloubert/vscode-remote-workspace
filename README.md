@@ -19,17 +19,19 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
      * [Parameters](#parameters-)
      * [Remarks](#remarks-)
    * [Dropbox](#dropbox-)
-   * [FTP](#ftp-)
      * [Parameters](#parameters--1)
+   * [FTP](#ftp-)
+     * [Parameters](#parameters--2)
    * [S3 Buckets](#s3-buckets-)
      * [credential_type](#credential_type-)
-     * [Parameters](#parameters--2)
-   * [SFTP](#sftp-)
      * [Parameters](#parameters--3)
+   * [SFTP](#sftp-)
+     * [Parameters](#parameters--4)
    * [Slack](#slack-)
+     * [Parameters](#parameters--5)
      * [Remarks](#remarks--1)
    * [WebDAV](#webdav-)
-     * [Parameters](#parameters--4)
+     * [Parameters](#parameters--6)
 3. [Support and contribute](#support-and-contribute-)
 4. [Related projects](#related-projects-)
    * [vscode-helpers](#vscode-helpers-)
@@ -87,7 +89,8 @@ For accessing local storage emulator, use something like that:
 #### Parameters [[&uarr;](#azure-)]
 
 | Name | Description | Example | 
-| ---- | --------- | --------- | 
+| ---- | --------- | --------- |
+| `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=my_azure_account` |
 | `host` | The custom host address. | `host=azure.example.com` | 
 
 #### Remarks [[&uarr;](#azure-)]
@@ -108,6 +111,12 @@ URL Format: `dropbox://token[/path/to/file/or/folder]`
     "settings": {}
 }
 ```
+
+#### Parameters [[&uarr;](#dropbox-)]
+
+| Name | Description | Example | 
+| ---- | --------- | --------- |
+| `auth` | A path to a file, that contains the part left to `@` (the API token). Relative paths will be mapped to the user's home directory. | `auth=dropbox_token` |
 
 ### FTP [[&uarr;](#how-to-use-)]
 
@@ -208,6 +217,12 @@ URL Format: `slack://token@channel[/]`
 }
 ```
 
+#### Parameters [[&uarr;](#slack-)]
+
+| Name | Description | Example | 
+| ---- | --------- | --------- | 
+| `auth` | A path to a file, that contains the part left to `@` (the API token). Relative paths will be mapped to the user's home directory. | `auth=slack_token` |
+
 #### Remarks [[&uarr;](#slack-)]
 
 The protocol only supports read and list operations.
@@ -229,7 +244,8 @@ URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?opti
 #### Parameters [[&uarr;](#webdav-)]
 
 | Name | Description | Example | 
-| ---- | --------- | --------- | 
+| ---- | --------- | --------- |
+| `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=webdav_server1` |
 | `base` | The base path, that is used as prefix for all requests. | `base=nextcloud/remote.php/webdav/` |
 | `ssl` | Use secure HTTP or not. Can be `0` or `1`. Default: `0` | `ssl=1` |
 

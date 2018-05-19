@@ -21,6 +21,7 @@ import * as FS from 'fs';
 import * as FSExtra from 'fs-extra';
 import * as MimeTypes from 'mime-types';
 import * as Moment from 'moment';
+import * as MomentTZ from 'moment-timezone';  // REQUIRED EXTENSION FOR moment MODULE!!!
 import * as Path from 'path';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
@@ -228,23 +229,40 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
         let host = vscode_helpers.toStringSafe( PARAMS['host'] ).trim();
         let key: string;
 
+        let accountAndKey: string | false = false;
+        {
+            // external auth file?
+            let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
+            if (!vscode_helpers.isEmptyString(authFile)) {
+                authFile = vscrw.mapToUsersHome( authFile );
+
+                if (await vscode_helpers.isFile(authFile)) {
+                    accountAndKey = (await FSExtra.readFile(authFile, 'utf8')).trim();
+                }
+            }
+        }
+
         const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
         {
             const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
             if (AUTH_HOST_SEP > -1) {
-                container = AUTHORITITY.substr(AUTH_HOST_SEP + 1);
-
-                const ACCOUNT_AND_KEY = AUTHORITITY.substr(0, AUTH_HOST_SEP);
-
-                const ACCOUNT_AND_KEY_SEP = ACCOUNT_AND_KEY.indexOf( ':' );
-                if (ACCOUNT_AND_KEY_SEP > -1) {
-                    account = ACCOUNT_AND_KEY.substr(0, ACCOUNT_AND_KEY_SEP);
-                    key = ACCOUNT_AND_KEY.substr(ACCOUNT_AND_KEY_SEP + 1);
-                } else {
-                    account = ACCOUNT_AND_KEY;
+                if (false === accountAndKey) {
+                    accountAndKey = AUTHORITITY.substr(0, AUTH_HOST_SEP);
                 }
+
+                container = AUTHORITITY.substr(AUTH_HOST_SEP + 1);
             } else {
                 container = AUTHORITITY;
+            }
+        }
+
+        if (false !== accountAndKey) {
+            const ACCOUNT_AND_KEY_SEP = accountAndKey.indexOf( ':' );
+            if (ACCOUNT_AND_KEY_SEP > -1) {
+                account = accountAndKey.substr(0, ACCOUNT_AND_KEY_SEP);
+                key = accountAndKey.substr(ACCOUNT_AND_KEY_SEP + 1);
+            } else {
+                account = accountAndKey;
             }
         }
 

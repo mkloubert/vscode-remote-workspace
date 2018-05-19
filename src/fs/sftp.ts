@@ -176,15 +176,10 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
 
             let userAndPwd: string | false = false;
             {
-                // exiternal auth file?
+                // external auth file?
                 let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
                 if (!vscode_helpers.isEmptyString(authFile)) {
-                    if (!Path.isAbsolute(authFile)) {
-                        authFile = Path.join(
-                            OS.homedir(), authFile
-                        );
-                    }
-                    authFile = Path.resolve(authFile);
+                    authFile = vscrw.mapToUsersHome( authFile );
 
                     if (await vscode_helpers.isFile(authFile)) {
                         userAndPwd = (await FSExtra.readFile(authFile, 'utf8')).trim();

@@ -16,7 +16,6 @@
  */
 
 import * as _ from 'lodash';
-import * as FS from 'fs';
 import * as FSExtra from 'fs-extra';
 import * as HTTPs from 'https';
 import * as Path from 'path';
@@ -155,16 +154,38 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
         //
         // slack://token@channel[/]
 
+        const PARAMS = vscrw.uriParamsToObject(uri);
+
         let channel: string;
-        let token: string;
+
+        let token: string | false = false;
+
+        {
+            // external auth file?
+            let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
+            if (!vscode_helpers.isEmptyString(authFile)) {
+                authFile = vscrw.mapToUsersHome( authFile );
+
+                if (await vscode_helpers.isFile(authFile)) {
+                    token = (await FSExtra.readFile(authFile, 'utf8')).trim();
+                }
+            }
+        }
 
         const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
         {
             const TOKEN_CHANNEL_SEP = AUTHORITITY.indexOf( '@' );
             if (TOKEN_CHANNEL_SEP > -1) {
+                if (false === token) {
+                    token = AUTHORITITY.substr(0, TOKEN_CHANNEL_SEP).trim();
+                }
+
                 channel = AUTHORITITY.substr(TOKEN_CHANNEL_SEP + 1).toUpperCase().trim();
-                token = AUTHORITITY.substr(0, TOKEN_CHANNEL_SEP).trim();
             }
+        }
+
+        if (false === token) {
+            token = undefined;
         }
 
         if (vscode_helpers.isEmptyString(channel)) {
@@ -177,7 +198,7 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
         return {
             channel: channel,
             client: new Slack.WebClient(token),
-            token: token,
+            token: <string>token,
         };
     }
 

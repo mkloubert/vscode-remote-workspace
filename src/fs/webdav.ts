@@ -16,8 +16,9 @@
  */
 
 import * as _ from 'lodash';
+import * as FSExtra from 'fs-extra';
 import * as Moment from 'moment';
-import * as MomentTZ from 'moment-timezone';
+import * as MomentTZ from 'moment-timezone';  // REQUIRED EXTENSION FOR moment MODULE!!!
 import * as Path from 'path';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
@@ -302,12 +303,28 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         let ssl = vscrw.isTrue(PARAMS['ssl']);
         let password: string;
 
+        let userAndPwd: string | false = false;
+        {
+            // external auth file?
+            let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
+            if (!vscode_helpers.isEmptyString(authFile)) {
+                authFile = vscrw.mapToUsersHome( authFile );
+
+                if (await vscode_helpers.isFile(authFile)) {
+                    userAndPwd = (await FSExtra.readFile(authFile, 'utf8')).trim();
+                }
+            }
+        }
+
         const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
         {
             const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
             if (AUTH_HOST_SEP > -1) {
+                if (false === userAndPwd) {
+                    userAndPwd = AUTHORITITY.substr(0, AUTH_HOST_SEP);
+                }
+
                 const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-                const USER_AND_PWD = AUTHORITITY.substr(0, AUTH_HOST_SEP);
 
                 const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
                 if (HOST_PORT_SEP > -1) {
@@ -319,15 +336,25 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                     host = HOST_AND_PORT;
                 }
 
-                const USER_AND_PWD_SEP = USER_AND_PWD.indexOf( ':' );
+                const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
                 if (USER_AND_PWD_SEP > -1) {
-                    username = USER_AND_PWD.substr(0, USER_AND_PWD_SEP);
-                    password = USER_AND_PWD.substr(USER_AND_PWD_SEP + 1);
+                    username = userAndPwd.substr(0, USER_AND_PWD_SEP);
+                    password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
                 } else {
-                    username = USER_AND_PWD;
+                    username = userAndPwd;
                 }
             } else {
                 host = AUTHORITITY;
+            }
+        }
+
+        if (false !== userAndPwd) {
+            const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
+            if (USER_AND_PWD_SEP > -1) {
+                username = userAndPwd.substr(0, USER_AND_PWD_SEP);
+                password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
+            } else {
+                username = userAndPwd;
             }
         }
 

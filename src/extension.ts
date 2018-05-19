@@ -18,6 +18,7 @@
  */
 
 import * as _ from 'lodash';
+import * as OS from 'os';
 import * as Path from 'path';
 import * as URL from 'url';
 import * as vscode from 'vscode';
@@ -107,6 +108,25 @@ export function isTrue(value: any, ifEmpty = false) {
     return (true === value) || ['1', 'true', 'y', 'yes'].indexOf(
         vscode_helpers.normalizeString(value)
     ) > -1;
+}
+
+/**
+ * Maps a path to a the current user's home directory (if relative).
+ *
+ * @param {string} p The input value.
+ *
+ * @return {string} The mapped path.
+ */
+export function mapToUsersHome(p: string) {
+    p = vscode_helpers.toStringSafe(p);
+
+    if (!Path.isAbsolute(p)) {
+        p = Path.join(
+            OS.homedir(), p
+        );
+    }
+
+    return Path.resolve(p);
 }
 
 /**

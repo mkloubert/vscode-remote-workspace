@@ -15,7 +15,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as _ from 'lodash';
 import * as AWS from 'aws-sdk';
 import * as MimeTypes from 'mime-types';
 import * as Moment from 'moment';
