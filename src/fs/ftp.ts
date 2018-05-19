@@ -183,7 +183,7 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                             for (const ITEM of await this.list(U, conn)) {
                                 LIST.push({
                                     name: ITEM.name,
-                                    stat: await toFileStat(ITEM, uri, conn),
+                                    stat: await toFileStat(ITEM, U, conn),
                                 });
                             }
 
@@ -529,7 +529,9 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
                 for (const ITEM of LIST) {
                     if (ITEM.name === NAME) {
-                        stat = await toFileStat(ITEM, uri, conn);
+                        stat = await toFileStat(ITEM,
+                                                uriWithNewPath(uri, DIR),
+                                                conn);
                         break;
                     }
                 }

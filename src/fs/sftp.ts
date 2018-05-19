@@ -385,7 +385,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
 
                 for (const ITEM of LIST) {
                     if (ITEM.name === NAME) {
-                        const S = await toFileStat(ITEM, uri, conn);
+                        const S = await toFileStat(ITEM,
+                                                   uriWithNewPath(uri, DIR),
+                                                   conn);
 
                         stat = S[1];
                         break;
@@ -682,5 +684,11 @@ async function tryCloseConnection(conn: SFTPConnection) {
         return true;
     } catch {
         return false;
+    }
+}
+
+function uriWithNewPath(uri: vscode.Uri, newPath: string): vscode.Uri {
+    if (uri) {
+        return vscode.Uri.parse(`sftp://${ uri.authority }${ vscode_helpers.toStringSafe(newPath) }${ vscode_helpers.isEmptyString(uri.query) ? '' : ('?' + uri.query) }`);
     }
 }
