@@ -725,9 +725,6 @@ async function toFileStat(item: FTPDirectoryItem, uri: vscode.Uri, conn: FTPConn
 
         switch (vscode_helpers.normalizeString( item.type )) {
             case '0':
-                STAT.ctime = parseInt( vscode_helpers.toStringSafe(item.time).trim() );
-                STAT.mtime = parseInt( vscode_helpers.toStringSafe(item.time).trim() );
-                STAT.size = parseInt( vscode_helpers.toStringSafe(item.size).trim() );
                 STAT.type = vscode.FileType.File;
                 break;
 
@@ -790,6 +787,12 @@ async function toFileStat(item: FTPDirectoryItem, uri: vscode.Uri, conn: FTPConn
                     }
                 }
                 break;
+        }
+
+        if (vscode.FileType.File === STAT.type) {
+            STAT.ctime = parseInt( vscode_helpers.toStringSafe(item.time).trim() );
+            STAT.mtime = parseInt( vscode_helpers.toStringSafe(item.time).trim() );
+            STAT.size = parseInt( vscode_helpers.toStringSafe(item.size).trim() );
         }
 
         if (isNaN( STAT.ctime )) {

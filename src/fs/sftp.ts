@@ -564,6 +564,9 @@ async function toFileStat(fi: SFTP.FileInfo, uri: vscode.Uri, conn: SFTPConnecti
             }
         } else if ('-' === fi.type) {
             STAT.type = vscode.FileType.File;
+        }
+
+        if (vscode.FileType.File === STAT.type) {
             STAT.size = fi.size;
             STAT.ctime = fi.modifyTime;
             STAT.mtime = fi.modifyTime;
