@@ -20,15 +20,16 @@ Multi protocol support for handling remote files like local ones in [Visual Stud
      * [Remarks](#remarks-)
    * [Dropbox](#dropbox-)
    * [FTP](#ftp-)
+     * [Parameters](#parameters--1)
    * [S3 Buckets](#s3-buckets-)
      * [credential_type](#credential_type-)
-     * [Parameters](#parameters--1)
-   * [SFTP](#sftp-)
      * [Parameters](#parameters--2)
+   * [SFTP](#sftp-)
+     * [Parameters](#parameters--3)
    * [Slack](#slack-)
      * [Remarks](#remarks--1)
    * [WebDAV](#webdav-)
-     * [Parameters](#parameters--3)
+     * [Parameters](#parameters--4)
 3. [Support and contribute](#support-and-contribute-)
 4. [Related projects](#related-projects-)
    * [vscode-helpers](#vscode-helpers-)
@@ -122,6 +123,14 @@ URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
 }
 ```
 
+#### Parameters [[&uarr;](#ftp-)]
+
+| Name | Description | Example | 
+| ---- | --------- | --------- | 
+| `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftp_server1` |
+| `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
+| `noop` | The custom [FTP command](https://en.wikipedia.org/wiki/List_of_FTP_commands) to execute to check if connection is still alive. Default: `NOOP` | `noop=SYST` |
+
 ### S3 Buckets [[&uarr;](#how-to-use-)]
 
 URL Format: `s3://[credential_type@]bucket[/path/to/file/or/folder][?option1=value1&option2=value2]`
@@ -174,10 +183,13 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 | Name | Description | Example | 
 | ---- | --------- | --------- | 
 | `agent` | Name or path to ssh-agent for ssh-agent-based user authentication. | `agent=myAgent` |
-| `agentForward` | Set to `(true)`, to use OpenSSH agent forwarding (`auth-agent@openssh.com`) for the life of the connection. Default: `(false)` | `agentForward=true` |
+| `agentForward` | Set to `1`, to use OpenSSH agent forwarding (`auth-agent@openssh.com`) for the life of the connection. Default: `0` | `agentForward=1` |
 | `allowedHashes` | Comma-separated list of hashes to verify. | `allowedHashes=md5,sha-1` |
+| `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftp_server1` |
+| `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |
 | `key` | The path to the key file or the [Base64](https://en.wikipedia.org/wiki/Base64) string with its content. Relative paths will be mapped to the sub folder `.ssh` inside the user's home directory. | `key=id_rsa` |
+| `noop` | By default, a list operation is done for the root directory of the server, to check if a connection is alive. You can change this by executing a fast command on the server, which does not produce much response, e.g. | `noop=uname` |
 | `phrase` | The passphrase for the key file, if needed. | `phrase=myPassphrase` |
 | `timeout` | How long (in milliseconds) to wait for the SSH handshake to complete. Default: `20000` | `timeout=60000` |
 | `tryKeyboard` | Try keyboard-interactive user authentication if primary user authentication method fails. Can be `0` or `1`. Default: `0` | `tryKeyboard=1` |

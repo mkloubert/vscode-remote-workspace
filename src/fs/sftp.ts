@@ -26,7 +26,14 @@ import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
 
 interface SFTPConnection {
+    cache: SFTPConnectionCache;
     client: SFTP;
+    followSymLinks: boolean;
+    noop: string;
+}
+
+interface SFTPConnectionCache {
+    stats: any;
 }
 
 /**
@@ -111,8 +118,18 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         let conn = await this.testConnection( CACHE_KEY );
 
         if (false === conn) {
+            let noop = vscode_helpers.toStringSafe( PARAMS['noop'] );
+            if (vscode_helpers.isEmptyString(noop)) {
+                noop = undefined;
+            }
+
             conn = {
+                cache: {
+                    stats: {}
+                },
                 client: new SFTP(),
+                followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
+                noop: noop,
             };
 
             let agent = vscode_helpers.toStringSafe( PARAMS['agent'] );
@@ -124,7 +141,6 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             });
             let host: string;
             let hostHash = vscode_helpers.normalizeString( PARAMS['hash'] );
-            let username: string;
             let passphrase = vscode_helpers.toStringSafe( PARAMS['phrase'] );
             let password: string;
             let port: number;
@@ -132,6 +148,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 vscode_helpers.normalizeString( PARAMS['timeout'] )
             );
             let tryKeyboard = vscode_helpers.normalizeString( PARAMS['trykeyboard'] );
+            let username: string;
 
             let privateKey: Buffer;
             let key = vscode_helpers.toStringSafe( PARAMS['key'] );
@@ -157,12 +174,33 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 }
             }
 
+            let userAndPwd: string | false = false;
+            {
+                // exiternal auth file?
+                let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
+                if (!vscode_helpers.isEmptyString(authFile)) {
+                    if (!Path.isAbsolute(authFile)) {
+                        authFile = Path.join(
+                            OS.homedir(), authFile
+                        );
+                    }
+                    authFile = Path.resolve(authFile);
+
+                    if (await vscode_helpers.isFile(authFile)) {
+                        userAndPwd = (await FSExtra.readFile(authFile, 'utf8')).trim();
+                    }
+                }
+            }
+
             const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
             {
                 const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
                 if (AUTH_HOST_SEP > -1) {
+                    if (false === userAndPwd) {
+                        userAndPwd = AUTHORITITY.substr(0, AUTH_HOST_SEP);
+                    }
+
                     const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-                    const USER_AND_PWD = AUTHORITITY.substr(0, AUTH_HOST_SEP);
 
                     const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
                     if (HOST_PORT_SEP > -1) {
@@ -173,16 +211,18 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                     } else {
                         host = HOST_AND_PORT;
                     }
-
-                    const USER_AND_PWD_SEP = USER_AND_PWD.indexOf( ':' );
-                    if (USER_AND_PWD_SEP > -1) {
-                        username = USER_AND_PWD.substr(0, USER_AND_PWD_SEP);
-                        password = USER_AND_PWD.substr(USER_AND_PWD_SEP + 1);
-                    } else {
-                        username = USER_AND_PWD;
-                    }
                 } else {
                     host = AUTHORITITY;
+                }
+            }
+
+            if (false !== userAndPwd) {
+                const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
+                if (USER_AND_PWD_SEP > -1) {
+                    username = userAndPwd.substr(0, USER_AND_PWD_SEP);
+                    password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
+                } else {
+                    username = userAndPwd;
                 }
             }
 
@@ -220,7 +260,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 privateKey: privateKey,
                 port: port,
                 readyTimeout: isNaN(readyTimeout) ? 20000
-                                                : readyTimeout,
+                                                  : readyTimeout,
                 tryKeyboard: '' === tryKeyboard ? undefined
                                                 : vscrw.isTrue(tryKeyboard),
                 username: username,
@@ -249,11 +289,13 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                     vscrw.normalizePath( uri.path )
                 );
 
-                LIST.map(i => toFileStat(i)).forEach(i => {
+                for (const ITEM of LIST) {
+                    const S = await toFileStat(ITEM, uri, conn);
+
                     ITEMS.push([
-                        i[0], i[1].type
+                        S[0], S[1].type
                     ]);
-                });
+                }
             } catch {
                 throw vscode.FileSystemError.FileNotFound( uri );
             }
@@ -271,25 +313,11 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public readFile(uri: vscode.Uri): Promise<Uint8Array> {
         return this.forConnection(uri, async (conn) => {
-            let data: Uint8Array | false = false;
-
-            try {
-                data = vscrw.toUInt8Array(
-                    await vscode_helpers.asBuffer(
-                        await conn.client.get(
-                            vscrw.normalizePath( uri.path )
-                        )
-                    )
-                );
-            } catch {
-                data = false;
-            }
-
-            if (false === data) {
-                throw vscode.FileSystemError.FileNotFound( uri );
-            }
-
-            return data;
+            return vscode_helpers.asBuffer(
+                await conn.client.get(
+                    vscrw.normalizePath( uri.path )
+                )
+            );
         });
     }
 
@@ -357,7 +385,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
 
                 for (const ITEM of LIST) {
                     if (ITEM.name === NAME) {
-                        stat = toFileStat( ITEM )[1];
+                        const S = await toFileStat(ITEM, uri, conn);
+
+                        stat = S[1];
                         break;
                     }
                 }
@@ -377,9 +407,12 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         const CONN: SFTPConnection = this._CONN_CACHE[ cacheKey ];
         if (!_.isNil(CONN)) {
             try {
-                // TODO: remove this with a better and faster
-                // operation like NOOP from FTP
-                await CONN.client.list('/');
+                if (_.isNil(CONN.noop)) {
+                    await CONN.client.list('/');
+                } else {
+                    await execServerCommand(CONN.client,
+                                            CONN.noop);
+                }
 
                 result = CONN;
             } catch {
@@ -462,7 +495,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
     }
 }
 
-function toFileStat(fi: SFTP.FileInfo): [ string, vscode.FileStat ] {
+async function toFileStat(fi: SFTP.FileInfo, uri: vscode.Uri, conn: SFTPConnection): Promise<[ string, vscode.FileStat ]> {
     if (fi) {
         const STAT: vscode.FileStat = {
             type: vscode.FileType.Unknown,
@@ -473,6 +506,58 @@ function toFileStat(fi: SFTP.FileInfo): [ string, vscode.FileStat ] {
 
         if ('d' === fi.type) {
             STAT.type = vscode.FileType.Directory;
+        } else if ('l' === fi.type) {
+            STAT.type = vscode.FileType.SymbolicLink;
+
+            if (conn.followSymLinks) {
+                try {
+                    const FILE_OR_FOLDER = vscrw.normalizePath(
+                        Path.join(uri.path, fi.name)
+                    );
+
+                    const CACHED_VALUE: vscode.FileType = conn.cache.stats[ FILE_OR_FOLDER ];
+                    if (_.isNil(CACHED_VALUE)) {
+                        let type: vscode.FileType | false = false;
+
+                        try {
+                            // first try to check if file ...
+                            const STREAM: any = await conn.client.get(
+                                FILE_OR_FOLDER
+                            );
+
+                            // ... yes
+                            try {
+                                if (_.isFunction(STREAM.close)) {
+                                    STREAM.close();
+                                }
+                            } catch { }
+
+                            type = vscode.FileType.File;
+                        } catch {
+                            // now try to check if directory ...
+                            try {
+                                await conn.client.list(
+                                    FILE_OR_FOLDER
+                                );
+
+                                // ... yes
+                                type = vscode.FileType.Directory;
+                            } catch { /* no, handle as symbol link */ }
+                        }
+
+                        // TODO: implement later
+                        /*
+                        if (false !== type) {
+                            conn.cache.stats[ FILE_OR_FOLDER ] = STAT.type = type;
+                        }
+                        */
+                    } else {
+                        STAT.type = CACHED_VALUE;
+                    }
+                } catch {
+                    STAT.type = vscode.FileType.SymbolicLink;
+                }
+            }
         } else if ('-' === fi.type) {
             STAT.type = vscode.FileType.File;
             STAT.size = fi.size;
@@ -482,6 +567,93 @@ function toFileStat(fi: SFTP.FileInfo): [ string, vscode.FileStat ] {
 
         return [ fi.name, STAT ];
     }
+}
+
+function execServerCommand(conn: SFTP, cmd: string) {
+    cmd = vscode_helpers.toStringSafe(cmd);
+
+    return new Promise<Buffer>((resolve, reject) => {
+        let output: Buffer;
+
+        let completedInvoked = false;
+        const COMPLETED = (err: any) => {
+            if (completedInvoked) {
+                return;
+            }
+            completedInvoked = true;
+
+            if (err) {
+                reject(err);
+            } else {
+                resolve(output);
+            }
+        };
+
+        try {
+            output = Buffer.alloc(0);
+
+            conn['client'].exec(cmd, (err, stream) => {
+                if (err) {
+                    COMPLETED(err);
+                    return;
+                }
+
+                try {
+                    let dataListener: (chunk: any) => void;
+                    let endListener: (chunk: any) => void;
+                    let errorListener: (err: any) => void;
+
+                    const CLOSE_STREAM = (err: any) => {
+                        vscode_helpers.tryRemoveListener(stream,
+                                                         'end', endListener);
+                        vscode_helpers.tryRemoveListener(stream,
+                                                         'error', errorListener);
+                        vscode_helpers.tryRemoveListener(stream,
+                                                         'data', dataListener);
+
+                        COMPLETED(err);
+                    };
+
+                    errorListener = (streamErr) => {
+                        CLOSE_STREAM( streamErr );
+                    };
+
+                    endListener = () => {
+                        CLOSE_STREAM( null );
+                    };
+
+                    dataListener = (chunk) => {
+                        if (_.isNil(chunk)) {
+                            return;
+                        }
+
+                        try {
+                            if (!Buffer.isBuffer(chunk)) {
+                                chunk = new Buffer(vscode_helpers.toStringSafe(chunk),
+                                                   'binary');
+                            }
+
+                            output = Buffer.concat([ output, chunk ]);
+                        } catch (e) {
+                            CLOSE_STREAM(e);
+                        }
+                    };
+
+                    try {
+                        stream.once('error', endListener);
+                        stream.once('end', endListener);
+                        stream.on('data', dataListener);
+                    } catch (e) {
+                        CLOSE_STREAM(e);
+                    }
+                } catch (e) {
+                    COMPLETED(e);
+                }
+            });
+        } catch (e) {
+            COMPLETED(e);
+        }
+    });
 }
 
 async function tryCloseConnection(conn: SFTPConnection) {

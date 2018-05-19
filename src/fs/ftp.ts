@@ -16,7 +16,9 @@
  */
 
 import * as _ from 'lodash';
+import * as FSExtra from 'fs-extra';
 const jsFTP = require('jsftp');
+import * as OS from 'os';
 const ParseListening = require("parse-listing");
 import * as Path from 'path';
 import * as vscode from 'vscode';
@@ -25,7 +27,14 @@ import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
 
 interface FTPConnection {
+    cache: FTPConnectionCache;
     client: any;
+    followSymLinks: boolean;
+    noop: string;
+}
+
+interface FTPConnectionCache {
+    stats: any;
 }
 
 interface FTPDirectoryItem {
@@ -170,12 +179,13 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                             dir = vscrw.normalizePath( dir );
                             const U = uriWithNewPath(uri, dir);
 
-                            const LIST = (await this.list(U, conn)).map(x => {
-                                return {
-                                    name: x.name,
-                                    stat: toFileStat(x),
-                                };
-                            });
+                            const LIST: any[] = [];
+                            for (const ITEM of await this.list(U, conn)) {
+                                LIST.push({
+                                    name: ITEM.name,
+                                    stat: await toFileStat(ITEM, uri, conn),
+                                });
+                            }
 
                             const SUB_DIRS = vscode_helpers.from(LIST)
                                                            .where(x => vscode.FileType.Directory === x.stat.type)
@@ -242,39 +252,8 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
     private async list(uri: vscode.Uri, existingConn?: FTPConnection): Promise<FTPDirectoryItem[]> {
         return this.forConnection(uri, (conn) => {
-            return new Promise<FTPDirectoryItem[]>((resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
-
-                try {
-                    conn.client.list(vscrw.normalizePath(uri.path), (err, result) => {
-                        if (err) {
-                            if ('451' === vscode_helpers.normalizeString(err.code)) {
-                                COMPLETED(null, []);
-                                return;
-                            }
-
-                            COMPLETED(err);
-                            return;
-                        }
-
-                        try {
-                            ParseListening.parseEntries(result, (err, list) => {
-                                if (err) {
-                                    COMPLETED(err);
-                                } else {
-                                    COMPLETED(null,
-                                              vscode_helpers.asArray( list )
-                                                            .filter(x => !vscode_helpers.isEmptyString(x.name)));
-                                }
-                            });
-                        } catch (e) {
-                            COMPLETED( e );
-                        }
-                    });
-                } catch (e) {
-                    COMPLETED( e );
-                }
-            });
+            return listDirectory(conn.client,
+                                 uri.path);
         }, existingConn);
     }
 
@@ -300,19 +279,48 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
         const CACHE_KEY = vscrw.getConnectionCacheKey( uri );
 
+        const PARAMS = vscrw.uriParamsToObject(uri);
+
         let conn = await this.testConnection( CACHE_KEY );
+
         if (false === conn) {
             let username: string;
             let password: string;
             let host: string;
             let port: number;
 
+            let noop = vscode_helpers.toStringSafe( PARAMS['noop'] );
+            if (vscode_helpers.isEmptyString(noop)) {
+                noop = undefined;
+            }
+
+            let userAndPwd: string | false = false;
+            {
+                // exiternal auth file?
+                let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
+                if (!vscode_helpers.isEmptyString(authFile)) {
+                    if (!Path.isAbsolute(authFile)) {
+                        authFile = Path.join(
+                            OS.homedir(), authFile
+                        );
+                    }
+                    authFile = Path.resolve(authFile);
+
+                    if (await vscode_helpers.isFile(authFile)) {
+                        userAndPwd = (await FSExtra.readFile(authFile, 'utf8')).trim();
+                    }
+                }
+            }
+
             const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
             {
                 const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
                 if (AUTH_HOST_SEP > -1) {
+                    if (false === userAndPwd) {
+                        userAndPwd = AUTHORITITY.substr(0, AUTH_HOST_SEP);
+                    }
+
                     const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-                    const USER_AND_PWD = AUTHORITITY.substr(0, AUTH_HOST_SEP);
 
                     const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
                     if (HOST_PORT_SEP > -1) {
@@ -323,16 +331,18 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                     } else {
                         host = HOST_AND_PORT;
                     }
-
-                    const USER_AND_PWD_SEP = USER_AND_PWD.indexOf( ':' );
-                    if (USER_AND_PWD_SEP > -1) {
-                        username = USER_AND_PWD.substr(0, USER_AND_PWD_SEP);
-                        password = USER_AND_PWD.substr(USER_AND_PWD_SEP + 1);
-                    } else {
-                        username = USER_AND_PWD;
-                    }
                 } else {
                     host = AUTHORITITY;
+                }
+            }
+
+            if (false !== userAndPwd) {
+                const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
+                if (USER_AND_PWD_SEP > -1) {
+                    username = userAndPwd.substr(0, USER_AND_PWD_SEP);
+                    password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
+                } else {
+                    username = userAndPwd;
                 }
             }
 
@@ -351,12 +361,17 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
             tryCloseConnection( this._CONN_CACHE[ CACHE_KEY ] );
             this._CONN_CACHE[ CACHE_KEY ] = conn = {
+                cache: {
+                    stats: {},
+                },
                 client: new jsFTP({
                     host: host,
                     port: port,
                     user: username,
                     pass: password,
                 }),
+                followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
+                noop: noop,
             };
         }
 
@@ -366,18 +381,20 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public async readDirectory(uri: vscode.Uri): Promise<vscrw_fs.DirectoryEntry[]> {
-        const RESULT: vscrw_fs.DirectoryEntry[] = [];
+    public readDirectory(uri: vscode.Uri): Promise<vscrw_fs.DirectoryEntry[]> {
+        return this.forConnection(uri, async (conn) => {
+            const RESULT: vscrw_fs.DirectoryEntry[] = [];
 
-        for (const ITEM of await this.list(uri)) {
-            const STAT = toFileStat( ITEM );
+            for (const ITEM of await this.list(uri, conn)) {
+                const STAT = await toFileStat(ITEM, uri, conn);
 
-            RESULT.push(
-                [ ITEM.name, STAT.type ]
-            );
-        }
+                RESULT.push(
+                    [ ITEM.name, STAT.type ]
+                );
+            }
 
-        return RESULT;
+            return RESULT;
+        });
     }
 
     /**
@@ -385,10 +402,10 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public readFile(uri: vscode.Uri): Promise<Uint8Array> {
         return this.forConnection(uri, (conn) => {
-            return new Promise<Uint8Array>((resolve, reject) => {
+            return new Promise<Uint8Array>(async (resolve, reject) => {
                 let completedInvoked = false;
                 let resultBuffer: Buffer;
-                let socket: any;
+                let socket: NodeJS.ReadableStream;
                 const COMPLETED = (err: any) => {
                     if (completedInvoked) {
                         return;
@@ -400,46 +417,34 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                     if (err) {
                         reject( err );
                     } else {
-                        resolve(
-                            vscrw.toUInt8Array( resultBuffer )
-                        );
+                        resolve( resultBuffer );
                     }
                 };
 
                 try {
-                    conn.client.get(vscrw.normalizePath( uri.path ), (err, s) => {
-                        if (err) {
-                            COMPLETED( err );
-                            return;
-                        }
+                    socket = await openRead(conn.client, uri.path);
 
+                    resultBuffer = Buffer.alloc(0);
+
+                    socket.on("data", function(data: Buffer) {
                         try {
-                            socket = s;
-                            resultBuffer = Buffer.alloc( 0 );
-
-                            socket.on("data", function(data: Buffer) {
-                                try {
-                                    if (data) {
-                                        resultBuffer = Buffer.concat([ resultBuffer, data ]);
-                                    }
-                                } catch (e) {
-                                    COMPLETED(e);
-                                }
-                            });
-
-                            socket.once("close", function(hadErr) {
-                                if (hadErr) {
-                                    COMPLETED(new Error('Could not close socket!'));
-                                } else {
-                                    COMPLETED(null);
-                                }
-                            });
-
-                            socket.resume();
+                            if (data) {
+                                resultBuffer = Buffer.concat([ resultBuffer, data ]);
+                            }
                         } catch (e) {
                             COMPLETED(e);
                         }
                     });
+
+                    socket.once("close", function(hadErr) {
+                        if (hadErr) {
+                            COMPLETED(new Error('Could not close socket!'));
+                        } else {
+                            COMPLETED(null);
+                        }
+                    });
+
+                    socket.resume();
                 } catch (e) {
                     COMPLETED(e);
                 }
@@ -509,31 +514,33 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
             };
         }
 
-        let stat: vscode.FileStat | false = false;
+        return this.forConnection(uri, async (conn) => {
+            let stat: vscode.FileStat | false = false;
 
-        try {
-            const URI_PATH = vscrw.normalizePath( uri.path );
+            try {
+                const URI_PATH = vscrw.normalizePath( uri.path );
 
-            const NAME = Path.basename( URI_PATH );
-            const DIR = vscrw.normalizePath( Path.dirname( URI_PATH ) );
+                const NAME = Path.basename( URI_PATH );
+                const DIR = vscrw.normalizePath( Path.dirname( URI_PATH ) );
 
-            const PARENT_URI = uriWithNewPath( uri, DIR );
+                const PARENT_URI = uriWithNewPath( uri, DIR );
 
-            const LIST = await this.list( PARENT_URI );
+                const LIST = await this.list(PARENT_URI, conn);
 
-            for (const ITEM of LIST) {
-                if (ITEM.name === NAME) {
-                    stat = toFileStat( ITEM );
-                    break;
+                for (const ITEM of LIST) {
+                    if (ITEM.name === NAME) {
+                        stat = await toFileStat(ITEM, uri, conn);
+                        break;
+                    }
                 }
+            } catch { }
+
+            if (false === stat) {
+                throw vscode.FileSystemError.FileNotFound( uri );
             }
-        } catch { }
 
-        if (false === stat) {
-            throw vscode.FileSystemError.FileNotFound( uri );
-        }
-
-        return stat;
+            return stat;
+        });
     }
 
     private async testConnection(cacheKey: string) {
@@ -563,7 +570,25 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
             if (!_.isNil(CONN)) {
                 action = () => {
                     try {
-                        CONN.client.raw('NOOP', [], (err) => {
+                        let cmd: string;
+                        let cmdArgs: string[];
+                        if (_.isNil(CONN.noop)) {
+                            cmd = 'NOOP';
+                            cmdArgs = [];
+                        } else {
+                            const PARTS = vscode_helpers.from( CONN.noop.split(' ') )
+                                                        .skipWhile(x => '' === x.trim())
+                                                        .toArray();
+
+                            cmd = PARTS[0];
+
+                            cmdArgs = vscode_helpers.from(PARTS)
+                                                    .skip(1)
+                                                    .skipWhile(x => '' === x.trim())
+                                                    .toArray();
+                        }
+
+                        CONN.client.raw(cmd, cmdArgs, (err) => {
                             COMPLETED(err ? false : CONN);
                         });
                     } catch {
@@ -639,7 +664,57 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
     }
 }
 
-function toFileStat(item: FTPDirectoryItem): vscode.FileStat {
+function listDirectory(conn: any, path: string) {
+    return new Promise<FTPDirectoryItem[]>((resolve, reject) => {
+        const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+
+        try {
+            conn.list(vscrw.normalizePath(path), (err, result) => {
+                if (err) {
+                    if ('451' === vscode_helpers.normalizeString(err.code)) {
+                        COMPLETED(null, []);
+                        return;
+                    }
+
+                    COMPLETED(err);
+                    return;
+                }
+
+                try {
+                    ParseListening.parseEntries(result, (err, list) => {
+                        if (err) {
+                            COMPLETED(err);
+                        } else {
+                            COMPLETED(null,
+                                      vscode_helpers.asArray( list )
+                                                    .filter(x => !vscode_helpers.isEmptyString(x.name)));
+                        }
+                    });
+                } catch (e) {
+                    COMPLETED( e );
+                }
+            });
+        } catch (e) {
+            COMPLETED( e );
+        }
+    });
+}
+
+function openRead(conn: any, path: string) {
+    return new Promise<NodeJS.ReadableStream>((resolve, reject) => {
+        const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+
+        try {
+            conn.get(vscrw.normalizePath(path), (err, stream) => {
+                COMPLETED(err, stream);
+            });
+        } catch (e) {
+            COMPLETED(e);
+        }
+    });
+}
+
+async function toFileStat(item: FTPDirectoryItem, uri: vscode.Uri, conn: FTPConnection): Promise<vscode.FileStat> {
     if (item) {
         const STAT: vscode.FileStat = {
             ctime: undefined,
@@ -658,6 +733,58 @@ function toFileStat(item: FTPDirectoryItem): vscode.FileStat {
 
             case '1':
                 STAT.type = vscode.FileType.Directory;
+                break;
+
+            case '2':
+                {
+                    STAT.type = vscode.FileType.SymbolicLink;
+
+                    if (conn.followSymLinks) {
+                        try {
+                            const FILE_OR_FOLDER = vscrw.normalizePath(
+                                Path.join(uri.path, item.name)
+                            );
+
+                            const CACHED_VALUE: vscode.FileType = conn.cache.stats[ FILE_OR_FOLDER ];
+                            if (_.isNil(CACHED_VALUE)) {
+                                let type: vscode.FileType | false = false;
+
+                                try {
+                                    // first try to check if file ...
+                                    const STREAM: any = await openRead(conn.client, FILE_OR_FOLDER);
+
+                                    // ... yes
+                                    try {
+                                        if (_.isFunction(STREAM.destroy)) {
+                                            STREAM.destroy();
+                                        }
+                                    } catch { }
+
+                                    type = vscode.FileType.File;
+                                } catch {
+                                    // now try to check if directory ...
+                                    try {
+                                        await listDirectory(
+                                            conn.client, FILE_OR_FOLDER
+                                        );
+
+                                        // ... yes
+                                        type = vscode.FileType.Directory;
+                                    } catch { /* no, handle as symbol link */ }
+                                }
+
+                                // TODO: implement later
+                                /*
+                                if (false !== type) {
+                                    conn.cache.stats[ FILE_OR_FOLDER ] = STAT.type = type;
+                                }
+                                */
+                            }
+                        } catch {
+                            STAT.type = vscode.FileType.SymbolicLink;
+                        }
+                    }
+                }
                 break;
         }
 

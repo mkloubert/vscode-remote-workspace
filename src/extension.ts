@@ -95,10 +95,15 @@ export function getConnectionCacheKey(uri: vscode.Uri): string {
  * Checks if a value represents (true).
  *
  * @param {any} value The value to check.
+ * @param {boolean} [ifEmpty] The custom value to return if value is an empty string.
  *
  * @return {boolean} Represents (true) or not.
  */
-export function isTrue(value: any) {
+export function isTrue(value: any, ifEmpty = false) {
+    if (vscode_helpers.isEmptyString(value)) {
+        return vscode_helpers.toBooleanSafe(ifEmpty);
+    }
+
     return (true === value) || ['1', 'true', 'y', 'yes'].indexOf(
         vscode_helpers.normalizeString(value)
     ) > -1;
