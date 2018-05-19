@@ -572,6 +572,16 @@ async function toFileStat(fi: SFTP.FileInfo, uri: vscode.Uri, conn: SFTPConnecti
             STAT.mtime = fi.modifyTime;
         }
 
+        if (isNaN( STAT.ctime )) {
+            STAT.ctime = 0;
+        }
+        if (isNaN( STAT.mtime )) {
+            STAT.mtime = 0;
+        }
+        if (isNaN( STAT.size )) {
+            STAT.size = 0;
+        }
+
         return [ fi.name, STAT ];
     }
 }
