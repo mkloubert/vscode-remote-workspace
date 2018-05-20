@@ -83,7 +83,7 @@
         "@slack/client": "^4.2.2",
         "aws-sdk": "^2.243.1",
         "azure-storage": "^2.8.2",
-        "dropbox": "^4.0.5",
+        "dropbox": "4.0.4",
         "isomorphic-fetch": "^2.2.1",
         "jsftp": "^2.1.3",
         "lodash": "^4.17.10",

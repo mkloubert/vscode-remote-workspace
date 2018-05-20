@@ -9,7 +9,6 @@
 * fixed use of `tryKeyboard` parameter for [SFTP](https://github.com/mkloubert/vscode-remote-workspace#sftp-) connections, s. [issue #1](https://github.com/mkloubert/vscode-remote-workspace/issues/1)
 * updated the following [npm](https://www.npmjs.com/) modules:
   * [aws-sdk](https://www.npmjs.com/package/aws-sdk) `^2.243.1`
-  * [dropbox](https://www.npmjs.com/package/aws-sdk) `^4.0.5`
 
 ## 0.16.0 (May 20th, 2018; auth parameter)
 
