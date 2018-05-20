@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import * as vscrw from './extension';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 
@@ -48,6 +49,15 @@ export abstract class FileSystemBase extends vscode_helpers.DisposableBase imple
      * @inheritdoc
      */
     public abstract async delete(uri: vscode.Uri, options: { recursive: boolean });
+
+    /**
+     * Gets the logger for that file system provider.
+     *
+     * @return {vscode_helpers.Logger} The provider's logger.
+     */
+    public get logger() {
+        return vscrw.getLogger();
+    }
 
     /**
      * @inheritdoc

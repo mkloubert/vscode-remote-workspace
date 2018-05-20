@@ -134,6 +134,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
 
             let agent = vscode_helpers.toStringSafe( PARAMS['agent'] );
             let agentForward = vscode_helpers.normalizeString( PARAMS['agentforward'] );
+            let debug = vscrw.isTrue( PARAMS['debug'] );
             let hashes = vscode_helpers.normalizeString( PARAMS['allowedhashes'] ).split(',').map(h => {
                 return h.trim();
             }).filter(h => {
@@ -234,9 +235,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 password = undefined;
             }
 
-            const OPTS = {
+            const OPTS: any = {
                 agent: vscode_helpers.isEmptyString(agent) ? undefined
-                                                        : agent,
+                                                           : agent,
                 agentForward: vscrw.isTrue(agentForward),
                 host: host,
                 hostHash: <any>('' === hostHash ? 'md5' : hostHash),
@@ -261,7 +262,30 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 username: username,
             };
 
+            if (debug) {
+                OPTS.debug = (information: string) => {
+                    try {
+                        this.logger
+                            .info(information,
+                                  `sftp://${ host }:${ port }`);
+                    } catch { }
+                };
+            }
+
             await this.tryCloseAndDeleteConnection( CACHE_KEY );
+
+            if (tryKeyboard) {
+                const PWD = vscode_helpers.toStringSafe( password );
+
+                conn.client['client'].on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) => {
+                    try {
+                        finish([ PWD ]);
+                    } catch (e) {
+                        this.logger
+                            .trace(e, 'fs.sftp.SFTPFileSystem.openConnection(keyboard-interactive)');
+                    }
+                });
+            }
 
             await conn.client.connect(
                 OPTS

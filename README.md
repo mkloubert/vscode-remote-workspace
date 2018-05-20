@@ -138,6 +138,7 @@ URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
 | ---- | --------- | --------- | 
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftp_server1` |
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
+| `keepAlive` | Defines a time interval, in seconds, that sends a `NOOP` command automatically to keep the connection alive. | `keepAlive=15` |
 | `noop` | The custom [FTP command](https://en.wikipedia.org/wiki/List_of_FTP_commands) to execute to check if connection is still alive. Default: `NOOP` | `noop=SYST` |
 
 ### S3 Buckets [[&uarr;](#how-to-use-)]
@@ -195,6 +196,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 | `agentForward` | Set to `1`, to use OpenSSH agent forwarding (`auth-agent@openssh.com`) for the life of the connection. Default: `0` | `agentForward=1` |
 | `allowedHashes` | Comma-separated list of hashes to verify. | `allowedHashes=md5,sha-1` |
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftp_server1` |
+| `debug` | Set to `1`, to debug a connection. The logs will be written to `.vscode-remote-workspace/.logs` sub folder inside the user's home directory. Default: `0` | `debug=1` |
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |
 | `key` | The path to the key file or the [Base64](https://en.wikipedia.org/wiki/Base64) string with its content. Relative paths will be mapped to the sub folder `.ssh` inside the user's home directory. | `key=id_rsa` |

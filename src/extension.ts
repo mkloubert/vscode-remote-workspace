@@ -18,6 +18,9 @@
  */
 
 import * as _ from 'lodash';
+import * as FSExtra from 'fs-extra';
+import * as Moment from 'moment';
+import * as MomentTZ from 'moment-timezone';  // REQUIRED EXTENSION FOR moment MODULE!!!
 import * as OS from 'os';
 import * as Path from 'path';
 import * as URL from 'url';
@@ -36,10 +39,100 @@ import * as vscrw_fs_webdav from './fs/webdav';
  */
 export type KeyValuePairs<TValue = any> = { [key: string]: TValue };
 
+/**
+ * The name of the extension's directory inside the user's home directory.
+ */
+export const EXTENSION_DIR = '.vscode-remote-workspace';
 let isDeactivating = false;
+let logger: vscode_helpers.Logger;
 
 export async function activate(context: vscode.ExtensionContext) {
     const WF = vscode_helpers.buildWorkflow();
+
+    // extension's directory in user's home
+    WF.next(async () => {
+        try {
+            const EXT_DIR = mapToUsersHome('./' + EXTENSION_DIR);
+            if (!(await vscode_helpers.exists(EXT_DIR))) {
+                await FSExtra.mkdirs( EXT_DIR );
+            }
+        } catch { }
+    });
+
+    // logger
+    WF.next(() => {
+        logger = vscode_helpers.createLogger((ctx) => {
+            const EXT_DIR = mapToUsersHome('./' + EXTENSION_DIR);
+            if (!vscode_helpers.isDirectorySync(EXT_DIR)) {
+                return;
+            }
+
+            const LOGS_DIR = Path.join(EXT_DIR, '.logs');
+            if (!FSExtra.existsSync(LOGS_DIR)) {
+                FSExtra.mkdirsSync(LOGS_DIR);
+            }
+
+            if (!vscode_helpers.isDirectorySync(LOGS_DIR)) {
+                return;
+            }
+
+            let logType = ctx.type;
+            if (_.isNil(logType)) {
+                logType = vscode_helpers.LogType.Debug;
+            }
+
+            let time = ctx.time;
+            if (!Moment.isMoment(time)) {
+                time = Moment.utc();
+            }
+            time = vscode_helpers.asUTC(time);
+
+            if (vscode_helpers.LogType.Trace !== ctx.type) {
+                if (ctx.type > vscode_helpers.LogType.Info) {
+                    return;
+                }
+            }
+
+            let msg = `${vscode_helpers.LogType[logType].toUpperCase().trim()}`;
+
+            const TAG = vscode_helpers.normalizeString(
+                _.replace(
+                    vscode_helpers.normalizeString(ctx.tag),
+                    /\s/ig,
+                    '_'
+                )
+            );
+            if ('' !== TAG) {
+                msg += ' ' + TAG;
+            }
+
+            let logMsg = vscode_helpers.toStringSafe(ctx.message);
+            if (vscode_helpers.LogType.Trace === ctx.type) {
+                const STACK = vscode_helpers.toStringSafe(
+                    (new Error()).stack
+                ).split("\n").filter(l => {
+                    return l.toLowerCase()
+                            .trim()
+                            .startsWith('at ');
+                }).join("\n");
+
+                logMsg += `\n\nStack:\n${STACK}`;
+            }
+
+            msg += ` - [${time.format('DD/MMM/YYYY:HH:mm:ss')} +0000] "${
+                _.replace(logMsg, /"/ig, '\\"')
+            }"${OS.EOL}`;
+
+            const LOG_FILE = Path.resolve(
+                Path.join(
+                    LOGS_DIR,
+                    `${time.format('YYYYMMDD')}.log`
+                )
+            );
+
+            FSExtra.appendFileSync(LOG_FILE, msg, 'utf8');
+        });
+    });
 
     WF.next(() => {
         const CLASSES = [
@@ -62,7 +155,16 @@ export async function activate(context: vscode.ExtensionContext) {
     });
 
     if (!isDeactivating) {
-        await WF.start();
+        try {
+            await WF.start();
+        } catch (e) {
+            try {
+                const L = logger;
+                if (L) {
+                    L.trace(e, 'extension.activate()');
+                }
+            } catch { }
+        }
     }
 }
 
@@ -90,6 +192,15 @@ export function getConnectionCacheKey(uri: vscode.Uri): string {
            `${ vscode_helpers.toStringSafe(uri.authority) }\n` +
            `${ JSON.stringify( uriParamsToObject( uri ) ) }\n` +
            `${ vscode_helpers.normalizeString(uri.fragment) }`;
+}
+
+/**
+ * Gets the extension-wide logger.
+ *
+ * @return {vscode_helpers.Logger} The extension logger.
+ */
+export function getLogger() {
+    return logger;
 }
 
 /**

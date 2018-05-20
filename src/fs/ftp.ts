@@ -287,6 +287,9 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
             let password: string;
             let host: string;
             let port: number;
+            let keepAlive = parseFloat(
+                vscode_helpers.toStringSafe( PARAMS['keepalive'] ).trim()
+            );
 
             let noop = vscode_helpers.toStringSafe( PARAMS['noop'] );
             if (vscode_helpers.isEmptyString(noop)) {
@@ -367,6 +370,12 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
                 noop: noop,
             };
+
+            if (!isNaN(keepAlive)) {
+                conn.client.keepAlive(
+                    Math.floor(keepAlive * 1000.0)
+                );
+            }
         }
 
         return conn;
