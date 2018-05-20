@@ -390,7 +390,7 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                 result = Buffer.alloc(0);
             }
 
-            return vscrw.toUInt8Array(result);
+            return result;
         });
     }
 
@@ -634,24 +634,14 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public async writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }) {
+    public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
+            this.throwIfWriteFileIsNotAllowed(
+                await this.tryGetStat(uri), options,
+                uri
+            );
+
             const PATH = vscrw.normalizePath(uri.path);
-
-            const STAT = await this.tryGetStat(uri);
-            if (false === STAT) {
-                if (!options.create) {
-                    throw vscode.FileSystemError.FileNotFound( uri );
-                }
-            } else {
-                if (vscode.FileType.Directory === STAT.type) {
-                    throw vscode.FileSystemError.FileIsADirectory( uri );
-                }
-
-                if (!options.overwrite) {
-                    throw vscode.FileSystemError.FileExists( uri );
-                }
-            }
 
             let contentType = MimeTypes.lookup( Path.basename(PATH) );
             if (false === contentType) {
@@ -663,7 +653,7 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                 Bucket: undefined,
                 ContentType: contentType,
                 Key: toS3Path(PATH),
-                Body: new Buffer(content),
+                Body: vscrw.asBuffer(content),
             };
 
             await conn.client.putObject(PARAMS)

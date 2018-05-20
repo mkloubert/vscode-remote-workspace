@@ -25,6 +25,20 @@ import * as vscode_helpers from 'vscode-helpers';
 export type DirectoryEntry = [ string, vscode.FileType ];
 
 /**
+ * Options for 'writeFile()' method of a 'vscode.FileSystemProvider'.
+ */
+export interface WriteFileOptions {
+    /**
+     * Create file if not exist.
+     */
+    create: boolean;
+    /**
+     * Overwrite file if exist.
+     */
+    overwrite: boolean;
+}
+
+/**
  * SFTP file system.
  */
 export abstract class FileSystemBase extends vscode_helpers.DisposableBase implements vscode.FileSystemProvider {
@@ -85,6 +99,29 @@ export abstract class FileSystemBase extends vscode_helpers.DisposableBase imple
     public abstract async stat(uri: vscode.Uri): Promise<vscode.FileStat>;
 
     /**
+     * Throw an exception if writing a file is not allowed.
+     *
+     * @param {vscode.FileStat|false} stat The file information.
+     * @param {WriteFileOptions} options The options.
+     * @param {vscode.Uri} [uri] The optional URI.
+     */
+    protected throwIfWriteFileIsNotAllowed(stat: vscode.FileStat | false, options: WriteFileOptions, uri?: vscode.Uri) {
+        if (false === stat) {
+            if (!options.create) {
+                throw vscode.FileSystemError.FileNotFound( uri );
+            }
+        } else {
+            if (vscode.FileType.Directory === stat.type) {
+                throw vscode.FileSystemError.FileIsADirectory( uri );
+            }
+
+            if (!options.overwrite) {
+                throw vscode.FileSystemError.FileExists( uri );
+            }
+        }
+    }
+
+    /**
      * @inheritdoc
      */
     public abstract watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable;
@@ -92,5 +129,5 @@ export abstract class FileSystemBase extends vscode_helpers.DisposableBase imple
     /**
      * @inheritdoc
      */
-    public abstract async writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }): Promise<void>;
+    public abstract async writeFile(uri: vscode.Uri, content: Uint8Array, options: WriteFileOptions): Promise<void>;
 }

@@ -391,9 +391,7 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
      * @inheritdoc
      */
     public async readFile(uri: vscode.Uri): Promise<Uint8Array> {
-        return vscrw.toUInt8Array(
-            await this.readBlob(uri)
-        );
+        return this.readBlob(uri);
     }
 
     /**
@@ -609,24 +607,14 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public async writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }) {
-        const STAT = await this.tryGetStat(uri);
-        if (false === STAT) {
-            if (!options.create) {
-                throw vscode.FileSystemError.FileNotFound( uri );
-            }
-        } else {
-            if (vscode.FileType.Directory === STAT.type) {
-                throw vscode.FileSystemError.FileIsADirectory( uri );
-            }
-
-            if (!options.overwrite) {
-                throw vscode.FileSystemError.FileExists( uri );
-            }
-        }
+    public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
+        this.throwIfWriteFileIsNotAllowed(
+            await this.tryGetStat(uri), options,
+            uri
+        );
 
         await this.writeBlob(uri,
-                             new Buffer(content));
+                             vscrw.asBuffer(content));
     }
 }
 

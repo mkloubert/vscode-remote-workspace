@@ -244,8 +244,7 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
                     }, (resp) => {
                         if (200 === resp.statusCode) {
                             vscode_helpers.readAll(resp).then((data) => {
-                                COMPLETED(null,
-                                          vscrw.toUInt8Array(data));
+                                COMPLETED(null, data);
                             }, (err) => {
                                 COMPLETED(err);
                             });

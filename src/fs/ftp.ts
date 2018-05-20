@@ -636,29 +636,18 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public async writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }) {
+    public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
             return new Promise<void>(async (resolve, reject) => {
                 const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
 
                 try {
-                    const STAT = await this.tryGetStat(uri, conn);
+                    this.throwIfWriteFileIsNotAllowed(
+                        await this.tryGetStat(uri), options,
+                        uri
+                    );
 
-                    if (false === STAT) {
-                        if (!options.create) {
-                            throw vscode.FileSystemError.FileNotFound( uri );
-                        }
-                    } else {
-                        if (vscode.FileType.Directory === STAT.type) {
-                            throw vscode.FileSystemError.FileIsADirectory( uri );
-                        }
-
-                        if (!options.overwrite) {
-                            throw vscode.FileSystemError.FileExists( uri );
-                        }
-                    }
-
-                    conn.client.put(new Buffer(content), vscrw.normalizePath( uri.path ), (err) => {
+                    conn.client.put(vscrw.asBuffer(content), vscrw.normalizePath( uri.path ), (err) => {
                         COMPLETED( err );
                     });
                 } catch (e) {

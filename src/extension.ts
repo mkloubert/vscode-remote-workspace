@@ -168,6 +168,29 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 }
 
+/**
+ * Returns an UInt8 array as buffer.
+ *
+ * @param {Uint8Array} arr The input value.
+ * @param {boolean} [noNull] Do not return a (null) / (undefined) value.
+ *
+ * @return {Buffer} The output value.
+ */
+export function asBuffer(arr: Uint8Array, noNull = true): Buffer {
+    if (Buffer.isBuffer(arr)) {
+        return arr;
+    }
+
+    noNull = vscode_helpers.toBooleanSafe(noNull, true);
+
+    if (_.isNil(arr)) {
+        return noNull ? Buffer.alloc(0)
+                      : <any>arr;
+    }
+
+    return new Buffer(arr);
+}
+
 export function deactivate() {
     if (isDeactivating) {
         return;
@@ -278,17 +301,6 @@ export async function showError(err): Promise<string | undefined> {
             `ERROR: ${ vscode_helpers.toStringSafe(err) }`
         );
     }
-}
-
-/**
- * Converts a buffer to an UInt8 array.
- *
- * @param {Buffer} buff The input value.
- *
- * @return {Uint8Array} The output value.
- */
-export function toUInt8Array(buff: Buffer): Uint8Array {
-    return buff;
 }
 
 /**

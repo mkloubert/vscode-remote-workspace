@@ -427,7 +427,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                             } else {
                                 try {
                                     COMPLETED(null,
-                                              vscrw.toUInt8Array(new Buffer(body, 'binary')));
+                                              new Buffer(body, 'binary'));
                                 } catch (e) {
                                     COMPLETED(e);
                                 }
@@ -532,30 +532,20 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }) {
+    public writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         return this.forConnection(uri, (conn) => {
             return new Promise<void>(async (resolve, reject) => {
                 const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
 
                 try {
-                    const STAT = await this.tryGetStat(uri);
-                    if (false === STAT) {
-                        if (!options.create) {
-                            throw vscode.FileSystemError.FileNotFound( uri );
-                        }
-                    } else {
-                        if (vscode.FileType.Directory === STAT.type) {
-                            throw vscode.FileSystemError.FileIsADirectory( uri );
-                        }
-
-                        if (!options.overwrite) {
-                            throw vscode.FileSystemError.FileExists( uri );
-                        }
-                    }
+                    this.throwIfWriteFileIsNotAllowed(
+                        await this.tryGetStat(uri), options,
+                        uri
+                    );
 
                     conn.client.put(
                         toWebDAVPath(uri.path),
-                        (new Buffer(content)).toString('binary'),
+                        vscrw.asBuffer(content).toString('binary'),
                         (err: any) => {
                             COMPLETED(err);
                         }

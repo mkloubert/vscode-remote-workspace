@@ -236,7 +236,7 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
                     path: toDropboxPath(uri.path)
                 });
 
-                return vscrw.toUInt8Array( DATA['fileBinary'] );
+                return DATA['fileBinary'];
             } catch {
                 throw vscode.FileSystemError.FileNotFound( uri );
             }
@@ -373,26 +373,16 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public async writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }) {
+    public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
-            const STAT = await this.tryGetStat(uri);
-            if (false === STAT) {
-                if (!options.create) {
-                    throw vscode.FileSystemError.FileNotFound( uri );
-                }
-            } else {
-                if (vscode.FileType.Directory === STAT.type) {
-                    throw vscode.FileSystemError.FileIsADirectory( uri );
-                }
-
-                if (!options.overwrite) {
-                    throw vscode.FileSystemError.FileExists( uri );
-                }
-            }
+            this.throwIfWriteFileIsNotAllowed(
+                await this.tryGetStat(uri), options,
+                uri
+            );
 
             await conn.client.filesUpload({
                 autorename: false,
-                contents: new Buffer(content),
+                contents: vscrw.asBuffer(content),
                 mode: {
                     '.tag': 'overwrite'
                 },
