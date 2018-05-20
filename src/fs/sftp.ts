@@ -667,7 +667,7 @@ function execServerCommand(conn: SFTP, cmd: string) {
                     };
 
                     try {
-                        stream.once('error', endListener);
+                        stream.once('error', errorListener);
                         stream.once('end', endListener);
                         stream.on('data', dataListener);
                     } catch (e) {
