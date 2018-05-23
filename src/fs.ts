@@ -20,12 +20,17 @@ import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 
 /**
+ * Options for 'copy()' method of a 'vscode.FileSystemProvider' object.
+ */
+export type CopyOptions = { overwrite: boolean };
+
+/**
  * An directory item.
  */
 export type DirectoryEntry = [ string, vscode.FileType ];
 
 /**
- * Options for 'writeFile()' method of a 'vscode.FileSystemProvider'.
+ * Options for 'writeFile()' method of a 'vscode.FileSystemProvider' object.
  */
 export interface WriteFileOptions {
     /**

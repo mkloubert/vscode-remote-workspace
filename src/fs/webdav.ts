@@ -55,6 +55,30 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
+    public copy(source: vscode.Uri, destination: vscode.Uri, options: vscrw_fs.CopyOptions) {
+        return this.forConnection(source, (conn) => {
+            return new Promise<void>((resolve, reject) => {
+                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+
+                try {
+                    conn.client.copy(
+                        toWebDAVPath(source.path),
+                        toWebDAVPath(destination.path),
+                        options.overwrite,
+                        (err) => {
+                            COMPLETED(err);
+                        }
+                    );
+                } catch (e) {
+                    COMPLETED(e);
+                }
+            });
+        });
+    }
+
+    /**
+     * @inheritdoc
+     */
     public async createDirectory(uri: vscode.Uri) {
         return this.forConnection(uri, (conn) => {
             return new Promise<void>((resolve, reject) => {
@@ -99,11 +123,19 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
     private async forConnection<TResult = any>(
         uri: vscode.Uri, action: (conn: WebDAVConnection) => TResult | PromiseLike<TResult>
     ): Promise<TResult> {
-        const CONN = await this.openConnection(uri);
-        if (action) {
-            return await Promise.resolve(
-                action( CONN )
-            );
+        try {
+            const CONN = await this.openConnection(uri);
+
+            if (action) {
+                return await Promise.resolve(
+                    action( CONN )
+                );
+            }
+        } catch (e) {
+            this.logger
+                .trace(e, 'fs.webdav.WebDAVFileSystem.forConnection()');
+
+            throw e;
         }
     }
 
@@ -227,7 +259,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                         conn.client.readdir(
                             toWebDAVPath(uri.path),
                             {
-                                proerties: false,
+                                properties: false,
                             },
                             (err: any, files: string[]) => {
                                 if (err) {

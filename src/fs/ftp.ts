@@ -237,15 +237,22 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
         uri: vscode.Uri, action: (conn: FTPConnection) => TResult | PromiseLike<TResult>,
         existingConn?: FTPConnection
     ): Promise<TResult> {
-        const USE_EXISTING_CONN = !_.isNil( existingConn );
+        try {
+            const USE_EXISTING_CONN = !_.isNil( existingConn );
 
-        const CONN = USE_EXISTING_CONN ? existingConn
-                                       : await this.openConnection(uri);
+            const CONN = USE_EXISTING_CONN ? existingConn
+                                           : await this.openConnection(uri);
 
-        if (action) {
-            return await Promise.resolve(
-                action( CONN )
-            );
+            if (action) {
+                return await Promise.resolve(
+                    action( CONN )
+                );
+            }
+        } catch (e) {
+            this.logger
+                .trace(e, 'fs.ftp.FTPFileSystem.forConnection()');
+
+            throw e;
         }
     }
 

@@ -85,15 +85,22 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         uri: vscode.Uri, action: (conn: SFTPConnection) => TResult | PromiseLike<TResult>,
         existingConn?: SFTPConnection
     ): Promise<TResult> {
-        const USE_EXISTING_CONN = !_.isNil( existingConn );
+        try {
+            const USE_EXISTING_CONN = !_.isNil( existingConn );
 
-        const CONN = USE_EXISTING_CONN ? existingConn
-                                       : await this.openConnection(uri);
+            const CONN = USE_EXISTING_CONN ? existingConn
+                                           : await this.openConnection(uri);
 
-        if (action) {
-            return await Promise.resolve(
-                action( CONN )
-            );
+            if (action) {
+                return await Promise.resolve(
+                    action( CONN )
+                );
+            }
+        } catch (e) {
+            this.logger
+                .trace(e, 'fs.sftp.SFTPFileSystem.forConnection()');
+
+            throw e;
         }
     }
 
@@ -142,6 +149,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             });
             let host: string;
             let hostHash = vscode_helpers.normalizeString( PARAMS['hash'] );
+            let keepAlive = parseFloat(
+                vscode_helpers.toStringSafe( PARAMS['keepalive'] ).trim()
+            );
             let passphrase = vscode_helpers.toStringSafe( PARAMS['phrase'] );
             let password: string;
             let port: number;
@@ -250,6 +260,8 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                         vscode_helpers.normalizeString(keyHash)
                     ) > -1;
                 },
+                keepaliveInterval: isNaN( keepAlive ) ? undefined
+                                                      : Math.floor(keepAlive * 1000.0),
                 passphrase: '' === passphrase ? undefined
                                             : passphrase,
                 password: password,

@@ -69,11 +69,19 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
     private async forConnection<TResult = any>(
         uri: vscode.Uri, action: (conn: SlackConnection) => TResult | PromiseLike<TResult>
     ): Promise<TResult> {
-        const CONN = await this.openConnection(uri);
-        if (action) {
-            return await Promise.resolve(
-                action( CONN )
-            );
+        try {
+            const CONN = await this.openConnection(uri);
+
+            if (action) {
+                return await Promise.resolve(
+                    action( CONN )
+                );
+            }
+        } catch (e) {
+            this.logger
+                .trace(e, 'fs.slack.SlackFileSystem.forConnection()');
+
+            throw e;
         }
     }
 

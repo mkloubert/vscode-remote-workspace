@@ -132,12 +132,19 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
     private async forConnection<TResult = any>(
         uri: vscode.Uri, action: (conn: S3Connection) => TResult | PromiseLike<TResult>
     ): Promise<TResult> {
-        const CONN = await this.openConnection(uri);
+        try {
+            const CONN = await this.openConnection(uri);
 
-        if (action) {
-            return await Promise.resolve(
-                action( CONN )
-            );
+            if (action) {
+                return await Promise.resolve(
+                    action( CONN )
+                );
+            }
+        } catch (e) {
+            this.logger
+                .trace(e, 'fs.s3.S3FileSystem.forConnection()');
+
+            throw e;
         }
     }
 

@@ -7,7 +7,7 @@
 [![Installs](https://vsmarketplacebadge.apphb.com/installs/mkloubert.vscode-remote-workspace.svg)](https://marketplace.visualstudio.com/items?itemName=mkloubert.vscode-remote-workspace)
 [![Rating](https://vsmarketplacebadge.apphb.com/rating-short/mkloubert.vscode-remote-workspace.svg)](https://marketplace.visualstudio.com/items?itemName=mkloubert.vscode-remote-workspace#review-details)
 
-Multi protocol support for handling remote files like local ones in [Visual Studio Code](https://code.visualstudio.com).
+Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com) [FileSystem API](https://code.visualstudio.com/docs/extensionAPI/vscode-api#FileSystemProvider), especially for handling remote files like local ones.
 
 ![Demo 1](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/demo1.gif)
 
@@ -199,6 +199,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 | `debug` | Set to `1`, to debug a connection. The logs will be written to `.vscode-remote-workspace/.logs` sub folder inside the user's home directory. Default: `0` | `debug=1` |
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |
+| `keepAlive` | Defines a time interval, in seconds, that sends "keep alive packages" automatically. | `keepAlive=15` |
 | `key` | The path to the key file or the [Base64](https://en.wikipedia.org/wiki/Base64) string with its content. Relative paths will be mapped to the sub folder `.ssh` inside the user's home directory. | `key=id_rsa` |
 | `noop` | By default, a list operation is done for the root directory of the server, to check if a connection is alive. You can change this by executing a fast command on the server, which does not produce much response, e.g. | `noop=uname` |
 | `phrase` | The passphrase for the key file, if needed. | `phrase=myPassphrase` |
