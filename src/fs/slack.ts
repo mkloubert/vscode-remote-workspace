@@ -276,7 +276,7 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
      */
     public static register(context: vscode.ExtensionContext) {
         context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider('slack',
+            vscode.workspace.registerFileSystemProvider(SlackFileSystem.scheme,
                                                         new SlackFileSystem(),
                                                         { isCaseSensitive: false })
         );
@@ -288,6 +288,11 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
     public async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }) {
         throw vscode.FileSystemError.NoPermissions( oldUri );
     }
+
+    /**
+     * Stores the name of the scheme.
+     */
+    public static readonly scheme = 'slack';
 
     /**
      * @inheritdoc

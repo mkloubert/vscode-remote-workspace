@@ -408,7 +408,7 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
      */
     public static register(context: vscode.ExtensionContext) {
         context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider('azure',
+            vscode.workspace.registerFileSystemProvider(AzureBlobFileSystem.scheme,
                                                         new AzureBlobFileSystem(),
                                                         { isCaseSensitive: true })
         );
@@ -480,6 +480,11 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
             }
         });
     }
+
+    /**
+     * Stores the name of the scheme.
+     */
+    public static readonly scheme = 'azure';
 
     /**
      * @inheritdoc

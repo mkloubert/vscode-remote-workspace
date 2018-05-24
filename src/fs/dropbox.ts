@@ -258,7 +258,7 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
      */
     public static register(context: vscode.ExtensionContext) {
         context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider('dropbox',
+            vscode.workspace.registerFileSystemProvider(DropboxFileSystem.scheme,
                                                         new DropboxFileSystem(),
                                                         { isCaseSensitive: false })
         );
@@ -286,6 +286,11 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
             });
         });
     }
+
+    /**
+     * Stores the name of the scheme.
+     */
+    public static readonly scheme = 'dropbox';
 
     /**
      * @inheritdoc

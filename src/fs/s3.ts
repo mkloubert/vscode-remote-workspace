@@ -408,7 +408,7 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
      */
     public static register(context: vscode.ExtensionContext) {
         context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider('s3',
+            vscode.workspace.registerFileSystemProvider(S3FileSystem.scheme,
                                                         new S3FileSystem(),
                                                         { isCaseSensitive: true })
         );
@@ -539,6 +539,11 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
             }
         });
     }
+
+    /**
+     * Stores the name of the scheme.
+     */
+    public static readonly scheme = 's3';
 
     /**
      * @inheritdoc

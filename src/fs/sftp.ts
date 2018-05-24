@@ -125,6 +125,8 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         let conn = await this.testConnection( CACHE_KEY );
 
         if (false === conn) {
+            const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri, 22);
+
             let noop = vscode_helpers.toStringSafe( PARAMS['noop'] );
             if (vscode_helpers.isEmptyString(noop)) {
                 noop = undefined;
@@ -147,19 +149,15 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             }).filter(h => {
                 return '' !== h;
             });
-            let host: string;
             let hostHash = vscode_helpers.normalizeString( PARAMS['hash'] );
             let keepAlive = parseFloat(
                 vscode_helpers.toStringSafe( PARAMS['keepalive'] ).trim()
             );
             let passphrase = vscode_helpers.toStringSafe( PARAMS['phrase'] );
-            let password: string;
-            let port: number;
             let readyTimeout = parseInt(
                 vscode_helpers.normalizeString( PARAMS['timeout'] )
             );
             let tryKeyboard = vscode_helpers.normalizeString( PARAMS['trykeyboard'] );
-            let username: string;
 
             let privateKey: Buffer;
             let key = vscode_helpers.toStringSafe( PARAMS['key'] );
@@ -185,71 +183,11 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 }
             }
 
-            let userAndPwd: string | false = false;
-            {
-                // external auth file?
-                let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
-                if (!vscode_helpers.isEmptyString(authFile)) {
-                    authFile = vscrw.mapToUsersHome( authFile );
-
-                    if (await vscode_helpers.isFile(authFile)) {
-                        userAndPwd = (await FSExtra.readFile(authFile, 'utf8')).trim();
-                    }
-                }
-            }
-
-            const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
-            {
-                const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
-                if (AUTH_HOST_SEP > -1) {
-                    if (false === userAndPwd) {
-                        userAndPwd = AUTHORITITY.substr(0, AUTH_HOST_SEP);
-                    }
-
-                    const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-
-                    const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
-                    if (HOST_PORT_SEP > -1) {
-                        host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
-                        port = parseInt(
-                            HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
-                        );
-                    } else {
-                        host = HOST_AND_PORT;
-                    }
-                } else {
-                    host = AUTHORITITY;
-                }
-            }
-
-            if (false !== userAndPwd) {
-                const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
-                if (USER_AND_PWD_SEP > -1) {
-                    username = userAndPwd.substr(0, USER_AND_PWD_SEP);
-                    password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
-                } else {
-                    username = userAndPwd;
-                }
-            }
-
-            if (vscode_helpers.isEmptyString( host )) {
-                host = '127.0.0.1';
-            }
-            if (isNaN( port )) {
-                port = 22;
-            }
-            if (vscode_helpers.isEmptyString( username )) {
-                username = undefined;
-            }
-            if ('' === vscode_helpers.toStringSafe( password )) {
-                password = undefined;
-            }
-
             const OPTS: any = {
                 agent: vscode_helpers.isEmptyString(agent) ? undefined
                                                            : agent,
                 agentForward: vscrw.isTrue(agentForward),
-                host: host,
+                host: HOST_AND_CRED.host,
                 hostHash: <any>('' === hostHash ? 'md5' : hostHash),
                 hostVerifier: (keyHash) => {
                     if (hashes.length < 1) {
@@ -264,14 +202,14 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                                                       : Math.floor(keepAlive * 1000.0),
                 passphrase: '' === passphrase ? undefined
                                             : passphrase,
-                password: password,
+                password: HOST_AND_CRED.password,
                 privateKey: privateKey,
-                port: port,
+                port: HOST_AND_CRED.port,
                 readyTimeout: isNaN(readyTimeout) ? 20000
                                                   : readyTimeout,
                 tryKeyboard: '' === tryKeyboard ? undefined
                                                 : vscrw.isTrue(tryKeyboard),
-                username: username,
+                username: HOST_AND_CRED.user,
             };
 
             if (debug) {
@@ -279,7 +217,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                     try {
                         this.logger
                             .info(information,
-                                  `sftp://${ host }:${ port }`);
+                                  `sftp://${ HOST_AND_CRED.host }:${ HOST_AND_CRED.port }`);
                     } catch { }
                 };
             }
@@ -287,7 +225,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             await this.tryCloseAndDeleteConnection( CACHE_KEY );
 
             if (tryKeyboard) {
-                const PWD = vscode_helpers.toStringSafe( password );
+                const PWD = vscode_helpers.toStringSafe( HOST_AND_CRED.password );
 
                 conn.client['client'].on('keyboard-interactive', (name, instructions, instructionsLang, prompts, finish) => {
                     try {
@@ -359,7 +297,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public static register(context: vscode.ExtensionContext) {
         context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider('sftp',
+            vscode.workspace.registerFileSystemProvider(SFTPFileSystem.scheme,
                                                         new SFTPFileSystem(),
                                                         { isCaseSensitive: true })
         );
@@ -385,6 +323,11 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             );
         });
     }
+
+    /**
+     * Stores the name of the scheme.
+     */
+    public static readonly scheme = 'sftp';
 
     /**
      * @inheritdoc

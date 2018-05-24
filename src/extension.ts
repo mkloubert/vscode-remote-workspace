@@ -21,8 +21,10 @@ import * as _ from 'lodash';
 import * as FSExtra from 'fs-extra';
 import * as Moment from 'moment';
 import * as MomentTZ from 'moment-timezone';  // REQUIRED EXTENSION FOR moment MODULE!!!
+import * as Net from 'net';  // REQUIRED EXTENSION FOR moment MODULE!!!
 import * as OS from 'os';
 import * as Path from 'path';
+import * as SimpleSocket from 'node-simple-socket';
 import * as URL from 'url';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
@@ -35,16 +37,49 @@ import * as vscrw_fs_slack from './fs/slack';
 import * as vscrw_fs_webdav from './fs/webdav';
 
 /**
+ * Stores host, port and credentials.
+ */
+export interface HostAndCredentials {
+    /**
+     * The host address.
+     */
+    host: string;
+    /**
+     * The password.
+     */
+    password: string;
+    /**
+     * The TCP port.
+     */
+    port: number;
+    /**
+     * The username.
+     */
+    user: string;
+}
+
+/**
  * A key value paris.
  */
 export type KeyValuePairs<TValue = any> = { [key: string]: TValue };
 
+interface SharedRemoteUri {
+    uri: string;
+}
+
+interface WorkspaceQuickPickItem extends vscode.QuickPickItem {
+    action?: () => any;
+    folder: vscode.WorkspaceFolder;
+}
+
+const DEFAULT_SHARE_URI_PORT = 1248;
 /**
  * The name of the extension's directory inside the user's home directory.
  */
 export const EXTENSION_DIR = '.vscode-remote-workspace';
 let isDeactivating = false;
 let logger: vscode_helpers.Logger;
+let nextReceiveRemoteURICommandId = Number.MIN_SAFE_INTEGER;
 
 export async function activate(context: vscode.ExtensionContext) {
     const WF = vscode_helpers.buildWorkflow();
@@ -135,23 +170,329 @@ export async function activate(context: vscode.ExtensionContext) {
     });
 
     WF.next(() => {
-        const CLASSES = [
-            vscrw_fs_sftp.SFTPFileSystem,
-            vscrw_fs_ftp.FTPFileSystem,
-            vscrw_fs_dropbox.DropboxFileSystem,
-            vscrw_fs_azure.AzureBlobFileSystem,
-            vscrw_fs_s3.S3FileSystem,
-            vscrw_fs_slack.SlackFileSystem,
-            vscrw_fs_webdav.WebDAVFileSystem,
-        ];
-
-        for (const C of CLASSES) {
+        for (const C of getClasses()) {
             try {
                 C.register( context );
             } catch (e) {
                 showError(e);
             }
         }
+    });
+
+    // commands
+    WF.next(() => {
+        context.subscriptions.push(
+            // openURI
+            vscode.commands.registerCommand('extension.remote.workspace.openURI', async () => {
+                try {
+                    const URI_VALUE = await vscode.window.showInputBox({
+                        password: false,
+                        placeHolder: 'Enter a supported URI here ...',
+                        prompt: "Open Remote URI",
+                        validateInput: (v) => {
+                            try {
+                                if (!vscode_helpers.isEmptyString(v)) {
+                                    const U = vscode.Uri.parse( v.trim() );
+                                    if (!isSchemeSupported(U)) {
+                                        return `Unsupported protocol '${ U.scheme }'!`;
+                                    }
+                                }
+                            } catch (e) {
+                                if (e instanceof Error) {
+                                    return e.message;
+                                } else {
+                                    return vscode_helpers.toStringSafe(e);
+                                }
+                            }
+                        }
+                    });
+
+                    if (vscode_helpers.isEmptyString( URI_VALUE )) {
+                        return;
+                    }
+
+                    const URI = vscode.Uri.parse( URI_VALUE );
+
+                    if (!isSchemeSupported(URI)) {
+                        vscode.window.showWarningMessage(
+                            `Protocol '${ URI.scheme }' is not supported!`
+                        );
+
+                        return;
+                    }
+
+                    let name = await vscode.window.showInputBox({
+                        password: false,
+                        placeHolder: 'Press ENTER to use default ...',
+                        prompt: "Custom Name For Remote Workspace"
+                    });
+                    if (_.isNil(name)) {
+                        return;
+                    }
+
+                    name = name.trim();
+                    if ('' === name) {
+                        name = undefined;
+                    }
+
+                    vscode.workspace.updateWorkspaceFolders(
+                        0, 0,
+                        {
+                            uri: URI,
+                            name: name,
+                        },
+                    );
+                } catch (e) {
+                    showError(e);
+                }
+            }),
+
+            // receiveWorkspaceURI
+            vscode.commands.registerCommand('extension.remote.workspace.receiveWorkspaceURI', async () => {
+                try {
+                    const PORT_VALUE = await vscode.window.showInputBox({
+                        password: false,
+                        placeHolder: `Enter the TCP port you want to listen on (default: ${ DEFAULT_SHARE_URI_PORT })...`,
+                        prompt: "Receive Remote URI",
+                        validateInput: (v) => {
+                            if (vscode_helpers.isEmptyString(v)) {
+                                return;
+                            }
+
+                            const PORT = parseInt(
+                                vscode_helpers.toStringSafe(v).trim()
+                            );
+
+                            if (isNaN(PORT)) {
+                                return 'No number entered!';
+                            }
+
+                            if (PORT < 1 || PORT > 65535) {
+                                return 'Value must be between 0 and 65535!';
+                            }
+                        }
+                    });
+
+                    if (_.isNil( PORT_VALUE )) {
+                        return;
+                    }
+
+                    let port = parseInt(
+                        vscode_helpers.toStringSafe(PORT_VALUE).trim()
+                    );
+                    if (isNaN(port)) {
+                        port = DEFAULT_SHARE_URI_PORT;
+                    }
+
+                    let server: Net.Server;
+                    const CLOSE_SERVER = () => {
+                        try {
+                            if (server) {
+                                server.close();
+                            }
+                        } catch (e) {
+                            getLogger().trace(e,
+                                              'extension.remote.workspace.receiveWorkspaceURI.CLOSE_SERVER()');
+                        }
+                    };
+
+                    let btn: vscode.StatusBarItem;
+                    let cmd: vscode.Disposable;
+                    const DISPOSE_BUTTON = () => {
+                        vscode_helpers.tryDispose( btn );
+                        vscode_helpers.tryDispose( cmd );
+                    };
+
+                    const DISPOSE_ALL = () => {
+                        DISPOSE_BUTTON();
+                        CLOSE_SERVER();
+                    };
+
+                    try {
+                        server = await SimpleSocket.listen(port, (err, socket) => {
+                            if (err) {
+                                DISPOSE_ALL();
+
+                                showError(err);
+                            } else {
+                                socket.readJSON<SharedRemoteUri>().then((sru) => {
+                                    (async () => {
+                                        if (!sru) {
+                                            return;
+                                        }
+
+                                        if (vscode_helpers.isEmptyString(sru.uri)) {
+                                            return;
+                                        }
+
+                                        try {
+                                            const URI = vscode.Uri.parse(sru.uri);
+                                            if (isSchemeSupported(URI)) {
+                                                const SELECTED_ITEM = await vscode.window.showWarningMessage(
+                                                    `'${ socket.socket.remoteAddress }' wants to share a remote URI of type '${ URI.scheme }' with you.`,
+                                                    {
+
+                                                    },
+                                                    {
+                                                        title: 'Reject',
+                                                        isCloseAffordance: true,
+                                                        value: 0,
+                                                    },
+                                                    {
+                                                        title: 'Open In Editor',
+                                                        value: 1,
+                                                    },
+                                                    {
+                                                        title: 'Open As Folder',
+                                                        value: 2,
+                                                    }
+                                                );
+
+                                                if (!SELECTED_ITEM) {
+                                                    return;
+                                                }
+
+                                                if (0 === SELECTED_ITEM.value) {
+                                                    return;
+                                                }
+
+                                                if (1 === SELECTED_ITEM.value) {
+                                                    await vscode_helpers.openAndShowTextDocument({
+                                                        content: `${ URI }`,
+                                                        language: 'plaintext',
+                                                    });
+                                                } else if (2 === SELECTED_ITEM.value) {
+                                                    vscode.workspace.updateWorkspaceFolders(
+                                                        0, 0,
+                                                        {
+                                                            uri: URI,
+                                                        },
+                                                    );
+                                                }
+
+                                                DISPOSE_ALL();
+                                            }
+                                        } catch (e) {
+                                            showError(e);
+                                        }
+                                    })().then(() => {
+                                    }, (err) => {
+                                        showError(err);
+                                    });
+                                }, (err) => {
+                                    showError(err);
+                                });
+                            }
+                        });
+
+                        const CMD_ID = `extension.remote.workspace.receiveWorkspaceURI.button${ nextReceiveRemoteURICommandId++ }`;
+
+                        cmd = vscode.commands.registerCommand(CMD_ID, () => {
+                            DISPOSE_ALL();
+                        });
+
+                        btn = vscode.window.createStatusBarItem();
+
+                        btn.text = 'Waiting for remote URI ...';
+                        btn.tooltip = `... on port ${ port }.\n\nClick here to cancel ...`;
+                        btn.command = CMD_ID;
+
+                        btn.show();
+                    } catch (e) {
+                        DISPOSE_ALL();
+
+                        throw e;
+                    }
+                } catch (e) {
+                    showError(e);
+                }
+            }),
+
+            // sendWorkspaceURI
+            vscode.commands.registerCommand('extension.remote.workspace.sendWorkspaceURI', async () => {
+                try {
+                    const QUICK_PICKS: WorkspaceQuickPickItem[] = vscode_helpers.asArray(
+                        vscode.workspace.workspaceFolders
+                    ).filter(ws => isSchemeSupported(ws.uri)).map(wsf => {
+                        let name = vscode_helpers.toStringSafe(wsf.name).trim();
+                        if ('' === name) {
+                            name = `Workspace #${ wsf.index }`;
+                        }
+
+                        return {
+                            action: async () => {
+                                const HOST_AND_PORT = await vscode.window.showInputBox({
+                                    password: false,
+                                    placeHolder: `HOST_ADDRESS[:TCP_PORT = ${ DEFAULT_SHARE_URI_PORT }]`,
+                                    prompt: "Recipient Of Workspace URI",
+                                });
+
+                                if (vscode_helpers.isEmptyString(HOST_AND_PORT)) {
+                                    return;
+                                }
+
+                                let host: string;
+                                let port: number;
+
+                                const HOST_PORT_SEP = HOST_AND_PORT.indexOf(':');
+                                if (HOST_PORT_SEP > -1) {
+                                    host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
+                                    port = parseInt(
+                                        HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
+                                    );
+                                } else {
+                                    host = HOST_AND_PORT;
+                                }
+
+                                host = vscode_helpers.normalizeString(host);
+                                if ('' === host) {
+                                    host = '127.0.0.1';
+                                }
+
+                                if (isNaN(port)) {
+                                    port = DEFAULT_SHARE_URI_PORT;
+                                }
+
+                                const SOCKET = await SimpleSocket.connect(port, host);
+                                try {
+                                    await SOCKET.writeJSON<SharedRemoteUri>({
+                                        uri: `${ wsf.uri }`
+                                    });
+                                } finally {
+                                    SOCKET.end();
+                                }
+                            },
+                            folder: wsf,
+                            label: name,
+                        };
+                    });
+
+                    if (QUICK_PICKS.length < 1) {
+                        vscode.window.showWarningMessage(
+                            'No workspace folder found, which can be shared!'
+                        );
+
+                        return;
+                    }
+
+                    let selectedItem: WorkspaceQuickPickItem;
+                    if (1 === QUICK_PICKS.length) {
+                        selectedItem = QUICK_PICKS[0];
+                    } else {
+                        selectedItem = await vscode.window.showQuickPick(QUICK_PICKS, {
+                            canPickMany: false,
+                            placeHolder: 'Select the workspace, you would like to share ...',
+                        });
+                    }
+
+                    if (selectedItem) {
+                        await selectedItem.action();
+                    }
+                } catch (e) {
+                    showError(e);
+                }
+            }),
+        );
     });
 
     if (!isDeactivating) {
@@ -200,6 +541,111 @@ export function deactivate() {
 }
 
 /**
+ * Extracts the host, port and credentials from an URI.
+ *
+ * @param {vscode.Uri} uri The URI.
+ * @param {number} [defaultPort] The default TCP port.
+ *
+ * @return {Promise<HostAndCredentials>} The promise with the extracted data.
+ */
+export async function extractHostAndCredentials(uri: vscode.Uri, defaultPort?: number): Promise<HostAndCredentials> {
+    if (_.isNaN(uri)) {
+        return <any>uri;
+    }
+
+    const DATA: HostAndCredentials = {
+        host: undefined,
+        password: undefined,
+        port: undefined,
+        user: undefined,
+    };
+
+    const PARAMS = uriParamsToObject(uri);
+
+    let userAndPwd: string | false = false;
+    {
+        // external auth file?
+        let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
+        if (!vscode_helpers.isEmptyString(authFile)) {
+            authFile = mapToUsersHome( authFile );
+
+            if (await vscode_helpers.isFile(authFile)) {
+                userAndPwd = (await FSExtra.readFile(authFile, 'utf8')).trim();
+            }
+        }
+    }
+
+    const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
+    {
+        const AUTH_HOST_SEP = AUTHORITITY.lastIndexOf( '@' );
+        if (AUTH_HOST_SEP > -1) {
+            if (false === userAndPwd) {
+                userAndPwd = AUTHORITITY.substr(0, AUTH_HOST_SEP);
+            }
+
+            const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
+
+            const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
+            if (HOST_PORT_SEP > -1) {
+                DATA.host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
+                DATA.port = parseInt(
+                    HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
+                );
+            } else {
+                DATA.host = HOST_AND_PORT;
+            }
+        } else {
+            DATA.host = AUTHORITITY;
+        }
+    }
+
+    if (false !== userAndPwd) {
+        const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
+        if (USER_AND_PWD_SEP > -1) {
+            DATA.user = userAndPwd.substr(0, USER_AND_PWD_SEP);
+            DATA.password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
+        } else {
+            DATA.user = userAndPwd;
+        }
+    }
+
+    if (vscode_helpers.isEmptyString(DATA.host)) {
+        DATA.host = '127.0.0.1';
+    }
+
+    if (isNaN(DATA.port)) {
+        DATA.port = parseInt(
+            vscode_helpers.toStringSafe(defaultPort).trim()
+        );
+    }
+    if (isNaN(DATA.port)) {
+        DATA.port = undefined;
+    }
+
+    if (vscode_helpers.isEmptyString(DATA.user)) {
+        DATA.user = undefined;
+    }
+
+    if ('' === vscode_helpers.toStringSafe(DATA.password)) {
+        DATA.password = undefined;
+    }
+
+    return DATA;
+}
+
+function getClasses() {
+    return [
+        vscrw_fs_sftp.SFTPFileSystem,
+        vscrw_fs_ftp.FTPFileSystem,
+        vscrw_fs_dropbox.DropboxFileSystem,
+        vscrw_fs_azure.AzureBlobFileSystem,
+        vscrw_fs_s3.S3FileSystem,
+        vscrw_fs_slack.SlackFileSystem,
+        vscrw_fs_webdav.WebDAVFileSystem,
+    ];
+}
+
+/**
  * Generates a connection cache key from an URI.
  *
  * @param {vscode.Uri} uri The URI.
@@ -224,6 +670,22 @@ export function getConnectionCacheKey(uri: vscode.Uri): string {
  */
 export function getLogger() {
     return logger;
+}
+
+/**
+ * Checks if a URI scheme is supported by that extension.
+ *
+ * @param {vscode.Uri} uri The URI to check.
+ *
+ * @return {boolean} Is supported or not.
+ */
+export function isSchemeSupported(uri: vscode.Uri) {
+    if (uri) {
+        return getClasses().map(c => <string>c.scheme)
+                           .indexOf( vscode_helpers.normalizeString(uri.scheme) ) > -1;
+    }
+
+    return false;
 }
 
 /**

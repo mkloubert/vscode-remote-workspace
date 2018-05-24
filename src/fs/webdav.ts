@@ -329,90 +329,21 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         let base = vscrw.normalizePath(
             vscode_helpers.toStringSafe(PARAMS['base'])
         );
-        let host: string;
-        let username: string;
-        let port: number;
         let ssl = vscrw.isTrue(PARAMS['ssl']);
-        let password: string;
 
-        let userAndPwd: string | false = false;
-        {
-            // external auth file?
-            let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
-            if (!vscode_helpers.isEmptyString(authFile)) {
-                authFile = vscrw.mapToUsersHome( authFile );
-
-                if (await vscode_helpers.isFile(authFile)) {
-                    userAndPwd = (await FSExtra.readFile(authFile, 'utf8')).trim();
-                }
-            }
-        }
-
-        const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
-        {
-            const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
-            if (AUTH_HOST_SEP > -1) {
-                if (false === userAndPwd) {
-                    userAndPwd = AUTHORITITY.substr(0, AUTH_HOST_SEP);
-                }
-
-                const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-
-                const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
-                if (HOST_PORT_SEP > -1) {
-                    host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
-                    port = parseInt(
-                        HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
-                    );
-                } else {
-                    host = HOST_AND_PORT;
-                }
-
-                const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
-                if (USER_AND_PWD_SEP > -1) {
-                    username = userAndPwd.substr(0, USER_AND_PWD_SEP);
-                    password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
-                } else {
-                    username = userAndPwd;
-                }
-            } else {
-                host = AUTHORITITY;
-            }
-        }
-
-        if (false !== userAndPwd) {
-            const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
-            if (USER_AND_PWD_SEP > -1) {
-                username = userAndPwd.substr(0, USER_AND_PWD_SEP);
-                password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
-            } else {
-                username = userAndPwd;
-            }
-        }
-
-        if (vscode_helpers.isEmptyString( host )) {
-            host = '127.0.0.1';
-        }
-        if (isNaN( port )) {
-            port = ssl ? 443 : 80;
-        }
-        if (vscode_helpers.isEmptyString( username )) {
-            username = undefined;
-        }
-        if ('' === vscode_helpers.toStringSafe( password )) {
-            password = undefined;
-        }
+        const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri,
+                                                                    ssl ? 443 : 80);
 
         let authenticator: any;
-        if (!_.isNil(username) || !_.isNil(password)) {
+        if (!_.isNil(HOST_AND_CRED.user) || !_.isNil(HOST_AND_CRED.password)) {
             authenticator = new WebDAV.BasicAuthenticator();
         }
 
         const OPTS: WebDAVConnectionOptions = {
             authenticator: authenticator,
-            password: password,
-            username: username,
-            url: `http${ ssl ? 's' : '' }://${ host }:${ port }${ base }`,
+            password: HOST_AND_CRED.password,
+            username: HOST_AND_CRED.user,
+            url: `http${ ssl ? 's' : '' }://${ HOST_AND_CRED.host }:${ HOST_AND_CRED.port }${ base }`,
         };
 
         return {
@@ -480,7 +411,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
      */
     public static register(context: vscode.ExtensionContext) {
         context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider('webdav',
+            vscode.workspace.registerFileSystemProvider(WebDAVFileSystem.scheme,
                                                         new WebDAVFileSystem(),
                                                         { isCaseSensitive: true })
         );
@@ -509,6 +440,11 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
             });
         });
     }
+
+    /**
+     * Stores the name of the scheme.
+     */
+    public static readonly scheme = 'webdav';
 
     /**
      * @inheritdoc

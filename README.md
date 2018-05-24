@@ -32,8 +32,10 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
      * [Remarks](#remarks--1)
    * [WebDAV](#webdav-)
      * [Parameters](#parameters--6)
-3. [Support and contribute](#support-and-contribute-)
-4. [Related projects](#related-projects-)
+3. [Commands](#commands-)
+4. [Support and contribute](#support-and-contribute-)
+5. [Related projects](#related-projects-)
+   * [node-simple-socket](#node-simple-socket-)
    * [vscode-helpers](#vscode-helpers-)
 
 ## Install [[&uarr;](#table-of-contents)]
@@ -252,6 +254,16 @@ URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?opti
 | `base` | The base path, that is used as prefix for all requests. | `base=nextcloud/remote.php/webdav/` |
 | `ssl` | Use secure HTTP or not. Can be `0` or `1`. Default: `0` | `ssl=1` |
 
+## Commands [[&uarr;](#table-of-contents)]
+
+Press `F1` and enter one of the following commands:
+
+| Name | Description |
+| ---- | --------- |
+| `Remote Workspace: Open URI ...` | Adds / opens a new workspace folder with a [supported URI](#how-to-use-). |
+| `Remote Workspace: Receive Remote URI ...` | Receives a remote URI from another editor. |
+| `Remote Workspace: Share Remote URI ...` | Shares a remote URI with another editor. |
+
 ## Support and contribute [[&uarr;](#table-of-contents)]
 
 If you like the extension, you can support the project by sending a [donation via PayPal](https://paypal.me/MarcelKloubert) to [me](https://github.com/mkloubert).
@@ -269,6 +281,10 @@ To work with the code:
 * make a [pull request](https://github.com/mkloubert/vscode-remote-workspace/pulls)
 
 ## Related projects [[&uarr;](#table-of-contents)]
+
+### node-simple-socket [[&uarr;](#related-projects-)]
+
+[node-simple-socket](https://github.com/mkloubert/node-simple-socket) is a simple socket class, which supports automatic [RSA](https://en.wikipedia.org/wiki/RSA_(cryptosystem)) encryption and compression for two connected endpoints and runs in [Node.js](https://nodejs.org/).
 
 ### vscode-helpers [[&uarr;](#related-projects-)]
 

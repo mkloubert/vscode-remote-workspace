@@ -290,10 +290,8 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
         let conn = await this.testConnection( CACHE_KEY );
 
         if (false === conn) {
-            let username: string;
-            let password: string;
-            let host: string;
-            let port: number;
+            const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri, 21);
+
             let keepAlive = parseFloat(
                 vscode_helpers.toStringSafe( PARAMS['keepalive'] ).trim()
             );
@@ -303,76 +301,16 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 noop = undefined;
             }
 
-            let userAndPwd: string | false = false;
-            {
-                // external auth file?
-                let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );
-                if (!vscode_helpers.isEmptyString(authFile)) {
-                    authFile = vscrw.mapToUsersHome( authFile );
-
-                    if (await vscode_helpers.isFile(authFile)) {
-                        userAndPwd = (await FSExtra.readFile(authFile, 'utf8')).trim();
-                    }
-                }
-            }
-
-            const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
-            {
-                const AUTH_HOST_SEP = AUTHORITITY.indexOf( '@' );
-                if (AUTH_HOST_SEP > -1) {
-                    if (false === userAndPwd) {
-                        userAndPwd = AUTHORITITY.substr(0, AUTH_HOST_SEP);
-                    }
-
-                    const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-
-                    const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
-                    if (HOST_PORT_SEP > -1) {
-                        host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
-                        port = parseInt(
-                            HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
-                        );
-                    } else {
-                        host = HOST_AND_PORT;
-                    }
-                } else {
-                    host = AUTHORITITY;
-                }
-            }
-
-            if (false !== userAndPwd) {
-                const USER_AND_PWD_SEP = userAndPwd.indexOf( ':' );
-                if (USER_AND_PWD_SEP > -1) {
-                    username = userAndPwd.substr(0, USER_AND_PWD_SEP);
-                    password = userAndPwd.substr(USER_AND_PWD_SEP + 1);
-                } else {
-                    username = userAndPwd;
-                }
-            }
-
-            if (vscode_helpers.isEmptyString( host )) {
-                host = '127.0.0.1';
-            }
-            if (isNaN( port )) {
-                port = 21;
-            }
-            if (vscode_helpers.isEmptyString( username )) {
-                username = undefined;
-            }
-            if ('' === vscode_helpers.toStringSafe( password )) {
-                password = undefined;
-            }
-
             tryCloseConnection( this._CONN_CACHE[ CACHE_KEY ] );
             this._CONN_CACHE[ CACHE_KEY ] = conn = {
                 cache: {
                     stats: {},
                 },
                 client: new jsFTP({
-                    host: host,
-                    port: port,
-                    user: username,
-                    pass: password,
+                    host: HOST_AND_CRED.host,
+                    port: HOST_AND_CRED.port,
+                    user: HOST_AND_CRED.user,
+                    pass: HOST_AND_CRED.password,
                 }),
                 followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
                 noop: noop,
@@ -473,7 +411,7 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
         context.subscriptions.push(
             NEW_FS,
 
-            vscode.workspace.registerFileSystemProvider('ftp',
+            vscode.workspace.registerFileSystemProvider(FTPFileSystem.scheme,
                                                         NEW_FS,
                                                         { isCaseSensitive: true }),
         );
@@ -506,6 +444,11 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
             });
         });
     }
+
+    /**
+     * Stores the name of the scheme.
+     */
+    public static readonly scheme = 'ftp';
 
     /**
      * @inheritdoc
