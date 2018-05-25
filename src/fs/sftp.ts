@@ -164,16 +164,19 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 passphrase = undefined;
             }
 
-            if (!vscode_helpers.isEmptyString(passphrase)) {
-                if (!NO_PHRASE_FILE) {
-                    const PHRASE_FILE = await vscrw.mapToUsersHome(passphrase);
+            // external passphrase file?
+            try {
+                if (!vscode_helpers.isEmptyString(passphrase)) {
+                    if (!NO_PHRASE_FILE) {
+                        const PHRASE_FILE = await vscrw.mapToUsersHome(passphrase);
 
-                    if (await vscode_helpers.isFile(PHRASE_FILE)) {
-                        // read from file
-                        passphrase = await FSExtra.readFile(PHRASE_FILE, 'utf8');
+                        if (await vscode_helpers.isFile(PHRASE_FILE)) {
+                            // read from file
+                            passphrase = await FSExtra.readFile(PHRASE_FILE, 'utf8');
+                        }
                     }
                 }
-            }
+            } catch { }
 
             let privateKey: Buffer;
             let key = vscode_helpers.toStringSafe( PARAMS['key'] );
