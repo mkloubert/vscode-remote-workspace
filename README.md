@@ -204,7 +204,8 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 | `keepAlive` | Defines a time interval, in seconds, that sends "keep alive packages" automatically. | `keepAlive=15` |
 | `key` | The path to the key file or the [Base64](https://en.wikipedia.org/wiki/Base64) string with its content. Relative paths will be mapped to the sub folder `.ssh` inside the user's home directory. | `key=id_rsa` |
 | `noop` | By default, a list operation is done for the root directory of the server, to check if a connection is alive. You can change this by executing a fast command on the server, which does not produce much response, e.g. | `noop=uname` |
-| `phrase` | The passphrase for the key file, if needed. | `phrase=myPassphrase` |
+| `noPhraseFile` | `1` indicates, that `phrase` parameter will NEVER handled as file path. Default: `0` | `noPhraseFile=1` |
+| `phrase` | The passphrase (or path to a file with it) for the key file, if needed. To prevent conflicts, you should additionally set `noPhraseFile` to `1`, if that value is explicitly a passphrase value and NO path to an external file. Relative file paths will be mapped to the user's home directory. | `phrase=myPassphrase` |
 | `timeout` | How long (in milliseconds) to wait for the SSH handshake to complete. Default: `20000` | `timeout=60000` |
 | `tryKeyboard` | Try keyboard-interactive user authentication if primary user authentication method fails. Can be `0` or `1`. Default: `0` | `tryKeyboard=1` |
 

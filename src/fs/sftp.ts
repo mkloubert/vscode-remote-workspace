@@ -153,11 +153,27 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             let keepAlive = parseFloat(
                 vscode_helpers.toStringSafe( PARAMS['keepalive'] ).trim()
             );
+            const NO_PHRASE_FILE = vscrw.isTrue( PARAMS['nophrasefile'] );
             let passphrase = vscode_helpers.toStringSafe( PARAMS['phrase'] );
             let readyTimeout = parseInt(
                 vscode_helpers.normalizeString( PARAMS['timeout'] )
             );
             let tryKeyboard = vscode_helpers.normalizeString( PARAMS['trykeyboard'] );
+
+            if ('' === passphrase) {
+                passphrase = undefined;
+            }
+
+            if (!vscode_helpers.isEmptyString(passphrase)) {
+                if (!NO_PHRASE_FILE) {
+                    const PHRASE_FILE = await vscrw.mapToUsersHome(passphrase);
+
+                    if (await vscode_helpers.isFile(PHRASE_FILE)) {
+                        // read from file
+                        passphrase = await FSExtra.readFile(PHRASE_FILE, 'utf8');
+                    }
+                }
+            }
 
             let privateKey: Buffer;
             let key = vscode_helpers.toStringSafe( PARAMS['key'] );
@@ -201,7 +217,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 keepaliveInterval: isNaN( keepAlive ) ? undefined
                                                       : Math.floor(keepAlive * 1000.0),
                 passphrase: '' === passphrase ? undefined
-                                            : passphrase,
+                                              : passphrase,
                 password: HOST_AND_CRED.password,
                 privateKey: privateKey,
                 port: HOST_AND_CRED.port,
