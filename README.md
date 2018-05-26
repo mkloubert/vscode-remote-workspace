@@ -27,6 +27,7 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
      * [Parameters](#parameters--3)
    * [SFTP](#sftp-)
      * [Parameters](#parameters--4)
+       * [mode](#mode-)
    * [Slack](#slack-)
      * [Parameters](#parameters--5)
      * [Remarks](#remarks--1)
@@ -203,11 +204,35 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 | `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |
 | `keepAlive` | Defines a time interval, in seconds, that sends "keep alive packages" automatically. | `keepAlive=15` |
 | `key` | The path to the key file or the [Base64](https://en.wikipedia.org/wiki/Base64) string with its content. Relative paths will be mapped to the sub folder `.ssh` inside the user's home directory. | `key=id_rsa` |
+| `mode` | Defines the [chmod](https://en.wikipedia.org/wiki/Chmod) access permission value for the files / folders on server. This can be an octal number or the path to a JSON file, that contains a "mapper" object. s. [mode](#mode-) for more information. | `mode=644` |
 | `noop` | By default, a list operation is done for the root directory of the server, to check if a connection is alive. You can change this by executing a fast command on the server, which does not produce much response, e.g. | `noop=uname` |
 | `noPhraseFile` | `1` indicates, that `phrase` parameter will NEVER handled as file path. Default: `0` | `noPhraseFile=1` |
 | `phrase` | The passphrase (or path to a file with it) for the key file, if needed. To prevent conflicts, you should additionally set `noPhraseFile` to `1`, if that value is explicitly a passphrase value and NO path to an external file. Relative file paths will be mapped to the user's home directory. | `phrase=myPassphrase` |
 | `timeout` | How long (in milliseconds) to wait for the SSH handshake to complete. Default: `20000` | `timeout=60000` |
 | `tryKeyboard` | Try keyboard-interactive user authentication if primary user authentication method fails. Can be `0` or `1`. Default: `0` | `tryKeyboard=1` |
+
+##### mode [[&uarr;](#parameters--4)]
+
+For that parameter, you can define an octal number, which will be applied to all files and folders, which are created or changed.
+
+You also can define a path to a JSON file, which contains a mapper object:
+
+```json
+{
+    "644": [
+        "**/*.php",
+        "**/*.phtml"
+    ],
+    "777": "/*.txt"
+}
+```
+
+Save the content to a file, like `sftp_modes.json`, inside your user directory, e.g., and save your mapping in the format as described by the upper JSON snippet.
+To use the mappings, setup the `mode` parameter with the path of that file (in that example to `sftp_modes.json`).
+
+Relative paths will be mapped to the user's home directory.
+
+Glob patterns are handled by [minimatch](https://github.com/isaacs/minimatch).
 
 ### Slack [[&uarr;](#how-to-use-)]
 

@@ -25,8 +25,11 @@ import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
 
+type FileModeMapper = { [mode: string]: string | string[] };
+
 interface SFTPConnection {
     cache: SFTPConnectionCache;
+    changeMode: (u: vscode.Uri) => PromiseLike<boolean>;
     client: SFTP;
     followSymLinks: boolean;
     noop: string;
@@ -59,6 +62,8 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             await conn.client.mkdir(
                 vscrw.normalizePath(uri.path), true
             );
+
+            await conn.changeMode(uri);
         });
     }
 
@@ -127,6 +132,16 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         if (false === conn) {
             const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri, 22);
 
+            const MODE = vscode_helpers.toStringSafe( PARAMS['mode'] );
+            let modeValueOrPath: string | number | false = false;
+            if (!vscode_helpers.isEmptyString(MODE)) {
+                modeValueOrPath = parseInt(MODE.trim());
+
+                if (isNaN(modeValueOrPath)) {
+                    modeValueOrPath = MODE;
+                }
+            }
+
             let noop = vscode_helpers.toStringSafe( PARAMS['noop'] );
             if (vscode_helpers.isEmptyString(noop)) {
                 noop = undefined;
@@ -135,6 +150,100 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             conn = {
                 cache: {
                     stats: {}
+                },
+                changeMode: (u) => {
+                    const LOG_TAG = `fs.sftp.openConnection.changeMode(${ u })`;
+
+                    return new Promise<boolean>(async (resolve, reject) => {
+                        let completedInvoked = false;
+                        const COMPLETED = (err: any) => {
+                            if (completedInvoked) {
+                                return;
+                            }
+                            completedInvoked = true;
+
+                            if (err) {
+                                this.logger
+                                    .trace(err, LOG_TAG);
+
+                                resolve(false);
+                            } else {
+                                resolve(true);
+                            }
+                        };
+
+                        try {
+                            let action = () => {
+                                COMPLETED(null);
+                            };
+
+                            if (false !== modeValueOrPath) {
+                                let mapper: FileModeMapper;
+                                if (_.isNumber(modeValueOrPath)) {
+                                    mapper = {};
+                                    mapper[ modeValueOrPath ] = '**/*';
+                                } else if (_.isString(modeValueOrPath)) {
+                                    const MODE_FILE = vscrw.mapToUsersHome(modeValueOrPath);
+
+                                    if (await vscode_helpers.isFile(MODE_FILE)) {
+                                        mapper = JSON.parse(
+                                            await FSExtra.readFile(MODE_FILE, 'utf8')
+                                        );
+                                    } else {
+                                        this.logger
+                                            .warn(`Mode file '${ modeValueOrPath }' not found!`, LOG_TAG);
+                                    }
+                                }
+
+                                if (mapper) {
+                                    const FILE_OR_FOLDER = vscrw.normalizePath(u.path);
+
+                                    let modeToSet: number | false = false;
+                                    for (const M in mapper) {
+                                        const MODE_VALUE = parseInt(
+                                            vscode_helpers.toStringSafe(M).trim(), 8
+                                        );
+
+                                        if (isNaN(MODE_VALUE)) {
+                                            this.logger
+                                                .warn(`'${ M }' is not valid mode value!`, LOG_TAG);
+
+                                            continue;
+                                        }
+
+                                        const PATTERNS = vscode_helpers.asArray(mapper[M]).map(x => {
+                                            return vscode_helpers.toStringSafe(x);
+                                        }).filter(x => !vscode_helpers.isEmptyString(x)).map(x => {
+                                            if (!x.trim().startsWith('/')) {
+                                                x = '/' + x;
+                                            }
+
+                                            return x;
+                                        });
+
+                                        if (vscode_helpers.doesMatch(FILE_OR_FOLDER, PATTERNS)) {
+                                            modeToSet = MODE_VALUE;  // last wins
+                                        }
+                                    }
+
+                                    if (false !== modeToSet) {
+                                        this.logger
+                                            .info(`Setting mode of '${ FILE_OR_FOLDER }' to ${ modeToSet.toString(8) }`, LOG_TAG);
+
+                                        action = () => {
+                                            (<SFTPConnection>conn).client['sftp'].chmod(FILE_OR_FOLDER, <number>modeToSet, (err) => {
+                                                COMPLETED(err);
+                                            });
+                                        };
+                                    }
+                                }
+                            }
+
+                            action();
+                        } catch (e) {
+                            COMPLETED(e);
+                        }
+                    });
                 },
                 client: new SFTP(),
                 followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
@@ -340,6 +449,8 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 vscrw.normalizePath( oldUri.path ),
                 vscrw.normalizePath( newUri.path ),
             );
+
+            await conn.changeMode(newUri);
         });
     }
 
@@ -475,6 +586,8 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 vscrw.asBuffer(content),
                 vscrw.normalizePath( uri.path ),
             );
+
+            await conn.changeMode(uri);
         });
     }
 }
