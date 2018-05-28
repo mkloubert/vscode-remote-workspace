@@ -575,6 +575,21 @@ export async function extractHostAndCredentials(uri: vscode.Uri, defaultPort?: n
         }
     }
 
+    const UPDATE_HOST_AND_PORT = (hostAndPort: string) => {
+        hostAndPort = vscode_helpers.toStringSafe(hostAndPort).trim();
+
+        const HOST_PORT_SEP = hostAndPort.indexOf( ':' );
+        if (HOST_PORT_SEP > -1) {
+            DATA.host = hostAndPort.substr(0, HOST_PORT_SEP).trim();
+            DATA.port = parseInt(
+                hostAndPort.substr(HOST_PORT_SEP + 1).trim()
+            );
+        } else {
+            DATA.host = hostAndPort;
+            DATA.port = undefined;
+        }
+    };
+
     const AUTHORITITY = vscode_helpers.toStringSafe( uri.authority );
     {
         const AUTH_HOST_SEP = AUTHORITITY.lastIndexOf( '@' );
@@ -583,19 +598,13 @@ export async function extractHostAndCredentials(uri: vscode.Uri, defaultPort?: n
                 userAndPwd = AUTHORITITY.substr(0, AUTH_HOST_SEP);
             }
 
-            const HOST_AND_PORT = AUTHORITITY.substr(AUTH_HOST_SEP + 1).trim();
-
-            const HOST_PORT_SEP = HOST_AND_PORT.indexOf( ':' );
-            if (HOST_PORT_SEP > -1) {
-                DATA.host = HOST_AND_PORT.substr(0, HOST_PORT_SEP).trim();
-                DATA.port = parseInt(
-                    HOST_AND_PORT.substr(HOST_PORT_SEP + 1).trim()
-                );
-            } else {
-                DATA.host = HOST_AND_PORT;
-            }
+            UPDATE_HOST_AND_PORT(
+                AUTHORITITY.substr(AUTH_HOST_SEP + 1)
+            );
         } else {
-            DATA.host = AUTHORITITY;
+            UPDATE_HOST_AND_PORT(
+                AUTHORITITY
+            );
         }
     }
 

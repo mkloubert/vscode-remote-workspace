@@ -228,9 +228,8 @@ You also can define a path to a JSON file, which contains a mapper object:
 ```
 
 Save the content to a file, like `sftp_modes.json`, inside your user directory, e.g., and save your mapping in the format as described by the upper JSON snippet.
-To use the mappings, setup the `mode` parameter with the path of that file (in that example to `sftp_modes.json`).
 
-Relative paths will be mapped to the user's home directory.
+To use the mappings, setup the `mode` parameter with the path of that file (in that example to `sftp_modes.json`). Relative paths will be mapped to the user's home directory.
 
 Glob patterns are handled by [minimatch](https://github.com/isaacs/minimatch).
 
