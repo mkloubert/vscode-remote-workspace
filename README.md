@@ -203,6 +203,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |
 | `keepAlive` | Defines a time interval, in seconds, that sends "keep alive packages" automatically. | `keepAlive=15` |
+| `keepMode` | Tries to detect the current [chmod](https://en.wikipedia.org/wiki/Chmod) access permission value of an existing file on server and tries to apply it when saving. Default: `1` | `keepMode=0` |
 | `key` | The path to the key file or the [Base64](https://en.wikipedia.org/wiki/Base64) string with its content. Relative paths will be mapped to the sub folder `.ssh` inside the user's home directory. | `key=id_rsa` |
 | `mode` | Defines the [chmod](https://en.wikipedia.org/wiki/Chmod) access permission value for the files / folders on server. This can be an octal number or the path to a JSON file, that contains a "mapper" object. s. [mode](#mode-) for more information. | `mode=644` |
 | `noop` | By default, a list operation is done for the root directory of the server, to check if a connection is alive. You can change this by executing a fast command on the server, which does not produce much response, e.g. | `noop=uname` |

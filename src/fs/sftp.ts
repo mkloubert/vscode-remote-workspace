@@ -29,14 +29,25 @@ type FileModeMapper = { [mode: string]: string | string[] };
 
 interface SFTPConnection {
     cache: SFTPConnectionCache;
-    changeMode: (u: vscode.Uri) => PromiseLike<boolean>;
+    changeMode: (u: vscode.Uri, m?: number) => PromiseLike<boolean>;
     client: SFTP;
     followSymLinks: boolean;
+    keepMode: boolean;
     noop: string;
 }
 
 interface SFTPConnectionCache {
     stats: any;
+}
+
+interface SFTPFileRights {
+    user: string;
+    group: string;
+    other: string;
+}
+
+interface SFTPFileStat extends vscode.FileStat {
+    __vscrw_fileinfo: SFTP.FileInfo;
 }
 
 /**
@@ -151,8 +162,12 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 cache: {
                     stats: {}
                 },
-                changeMode: (u) => {
+                changeMode: (u, m) => {
                     const LOG_TAG = `fs.sftp.openConnection.changeMode(${ u })`;
+
+                    m = parseInt(
+                        vscode_helpers.toStringSafe(m).trim()
+                    );
 
                     return new Promise<boolean>(async (resolve, reject) => {
                         let completedInvoked = false;
@@ -173,17 +188,26 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                         };
 
                         try {
+                            const SFTP_CONN = <SFTPConnection>conn;
+
                             let action = () => {
                                 COMPLETED(null);
                             };
 
-                            if (false !== modeValueOrPath) {
+                            let modeValueOrPathToUse = modeValueOrPath;
+
+                            if (!isNaN(m)) {
+                                // use explicit value
+                                modeValueOrPathToUse = m;
+                            }
+
+                            if (false !== modeValueOrPathToUse) {
                                 let mapper: FileModeMapper;
-                                if (_.isNumber(modeValueOrPath)) {
+                                if (_.isNumber(modeValueOrPathToUse)) {
                                     mapper = {};
-                                    mapper[ modeValueOrPath ] = '**/*';
-                                } else if (_.isString(modeValueOrPath)) {
-                                    const MODE_FILE = vscrw.mapToUsersHome(modeValueOrPath);
+                                    mapper[ modeValueOrPathToUse ] = '**/*';
+                                } else if (_.isString(modeValueOrPathToUse)) {
+                                    const MODE_FILE = vscrw.mapToUsersHome(modeValueOrPathToUse);
 
                                     if (await vscode_helpers.isFile(MODE_FILE)) {
                                         mapper = JSON.parse(
@@ -191,7 +215,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                                         );
                                     } else {
                                         this.logger
-                                            .warn(`Mode file '${ modeValueOrPath }' not found!`, LOG_TAG);
+                                            .warn(`Mode file '${ modeValueOrPathToUse }' not found!`, LOG_TAG);
                                     }
                                 }
 
@@ -231,7 +255,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                                             .info(`Setting mode of '${ FILE_OR_FOLDER }' to ${ modeToSet.toString(8) }`, LOG_TAG);
 
                                         action = () => {
-                                            (<SFTPConnection>conn).client['sftp'].chmod(FILE_OR_FOLDER, <number>modeToSet, (err) => {
+                                            SFTP_CONN.client['sftp'].chmod(FILE_OR_FOLDER, <number>modeToSet, (err) => {
                                                 COMPLETED(err);
                                             });
                                         };
@@ -247,6 +271,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 },
                 client: new SFTP(),
                 followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
+                keepMode: vscrw.isTrue(PARAMS['keepmode'], true),
                 noop: noop,
             };
 
@@ -466,9 +491,10 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         return this.statInner( uri );
     }
 
-    private async statInner(uri: vscode.Uri, existingConn?: SFTPConnection): Promise<vscode.FileStat> {
+    private async statInner(uri: vscode.Uri, existingConn?: SFTPConnection): Promise<SFTPFileStat> {
         if ('/' === vscrw.normalizePath(uri.path)) {
             return {
+                '__vscrw_fileinfo': undefined,
                 type: vscode.FileType.Directory,
                 ctime: 0,
                 mtime: 0,
@@ -477,7 +503,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         }
 
         return await this.forConnection(uri, async (conn) => {
-            let stat: vscode.FileStat | false = false;
+            let stat: SFTPFileStat | false = false;
 
             try {
                 const URI_PATH = vscrw.normalizePath( uri.path );
@@ -549,8 +575,26 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         });
     }
 
-    private async tryGetStat(uri: vscode.Uri, existingConn?: SFTPConnection): Promise<vscode.FileStat | false> {
-        let stat: vscode.FileStat | false;
+    private async tryGetMod(uri: vscode.Uri, stat?: SFTPFileStat | false) {
+        if (arguments.length < 2) {
+            stat = await this.tryGetStat(uri);
+        }
+
+        let mod: number;
+
+        if (false !== stat) {
+            if (stat.__vscrw_fileinfo) {
+                mod = chmodRightsToNumber(
+                    stat.__vscrw_fileinfo.rights
+                );
+            }
+        }
+
+        return mod;
+    }
+
+    private async tryGetStat(uri: vscode.Uri, existingConn?: SFTPConnection): Promise<SFTPFileStat | false> {
+        let stat: SFTPFileStat | false;
         try {
             stat = await this.statInner( uri, existingConn );
         } catch {
@@ -577,110 +621,91 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
+            const STAT = await this.tryGetStat(uri);
+
             this.throwIfWriteFileIsNotAllowed(
-                await this.tryGetStat(uri), options,
+                STAT, options,
                 uri
             );
+
+            let oldMod: number;
+            if (conn.keepMode) {
+                oldMod = await this.tryGetMod(uri, STAT);
+            }
 
             await conn.client.put(
                 vscrw.asBuffer(content),
                 vscrw.normalizePath( uri.path ),
             );
 
-            await conn.changeMode(uri);
+            await conn.changeMode(uri, oldMod);
         });
     }
 }
 
-async function toFileStat(fi: SFTP.FileInfo, uri: vscode.Uri, conn: SFTPConnection): Promise<[ string, vscode.FileStat ]> {
-    if (fi) {
-        const STAT: vscode.FileStat = {
-            type: vscode.FileType.Unknown,
-            ctime: 0,
-            mtime: 0,
-            size: 0,
-        };
-
-        if ('d' === fi.type) {
-            STAT.type = vscode.FileType.Directory;
-        } else if ('l' === fi.type) {
-            STAT.type = vscode.FileType.SymbolicLink;
-
-            if (conn.followSymLinks) {
-                try {
-                    const FILE_OR_FOLDER = vscrw.normalizePath(
-                        Path.join(uri.path, fi.name)
-                    );
-
-                    const CACHED_VALUE: vscode.FileType = conn.cache.stats[ FILE_OR_FOLDER ];
-                    if (_.isNil(CACHED_VALUE)) {
-                        let type: vscode.FileType | false = false;
-
-                        try {
-                            // first try to check if file ...
-                            const STREAM: any = await conn.client.get(
-                                FILE_OR_FOLDER
-                            );
-
-                            // ... yes
-                            try {
-                                if (_.isFunction(STREAM.close)) {
-                                    STREAM.close();
-                                }
-                            } catch { }
-
-                            type = vscode.FileType.File;
-                        } catch {
-                            // now try to check if directory ...
-                            try {
-                                await conn.client.list(
-                                    FILE_OR_FOLDER
-                                );
-
-                                // ... yes
-                                type = vscode.FileType.Directory;
-                            } catch { /* no, handle as symbol link */ }
-                        }
-
-                        // TODO: implement later
-                        /*
-                        if (false !== type) {
-                            conn.cache.stats[ FILE_OR_FOLDER ] = STAT.type = type;
-                        }
-                        */
-
-                        if (false !== type) {
-                            STAT.type = type;
-                        }
-                    } else {
-                        STAT.type = CACHED_VALUE;
-                    }
-                } catch {
-                    STAT.type = vscode.FileType.SymbolicLink;
-                }
-            }
-        } else if ('-' === fi.type) {
-            STAT.type = vscode.FileType.File;
-        }
-
-        if (vscode.FileType.File === STAT.type) {
-            STAT.size = fi.size;
-            STAT.ctime = fi.modifyTime;
-            STAT.mtime = fi.modifyTime;
-        }
-
-        if (isNaN( STAT.ctime )) {
-            STAT.ctime = 0;
-        }
-        if (isNaN( STAT.mtime )) {
-            STAT.mtime = 0;
-        }
-        if (isNaN( STAT.size )) {
-            STAT.size = 0;
-        }
-
-        return [ fi.name, STAT ];
+function chmodRightsToNumber(rights: SFTPFileRights): number {
+    if (_.isNil(rights)) {
+        return <any>rights;
     }
+
+    const USER = vscode_helpers.normalizeString(rights.user);
+    const GROUP = vscode_helpers.normalizeString(rights.group);
+    const OTHER = vscode_helpers.normalizeString(rights.other);
+
+    let u = 0;
+    for (let i = 0; i < USER.length; i++) {
+        switch (USER[i]) {
+            case 'r':
+                u = u | 4;
+                break;
+
+            case 'w':
+                u = u | 2;
+                break;
+
+            case 'x':
+                u = u | 1;
+                break;
+        }
+    }
+
+    let g = 0;
+    for (let i = 0; i < GROUP.length; i++) {
+        switch (GROUP[i]) {
+            case 'r':
+                g = g | 4;
+                break;
+
+            case 'w':
+                g = g | 2;
+                break;
+
+            case 'x':
+                g = g | 1;
+                break;
+        }
+    }
+
+    let o = 0;
+    for (let i = 0; i < OTHER.length; i++) {
+        switch (OTHER[i]) {
+            case 'r':
+                o = o | 4;
+                break;
+
+            case 'w':
+                o = o | 2;
+                break;
+
+            case 'x':
+                o = o | 1;
+                break;
+        }
+    }
+
+    return parseInt(
+        `${ u }${ g }${ o }`
+    );
 }
 
 function execServerCommand(conn: SFTP, cmd: string) {
@@ -768,6 +793,98 @@ function execServerCommand(conn: SFTP, cmd: string) {
             COMPLETED(e);
         }
     });
+}
+
+async function toFileStat(fi: SFTP.FileInfo, uri: vscode.Uri, conn: SFTPConnection): Promise<[ string, SFTPFileStat ]> {
+    if (fi) {
+        const STAT: SFTPFileStat = {
+            '__vscrw_fileinfo': fi,
+            type: vscode.FileType.Unknown,
+            ctime: 0,
+            mtime: 0,
+            size: 0,
+        };
+
+        if ('d' === fi.type) {
+            STAT.type = vscode.FileType.Directory;
+        } else if ('l' === fi.type) {
+            STAT.type = vscode.FileType.SymbolicLink;
+
+            if (conn.followSymLinks) {
+                try {
+                    const FILE_OR_FOLDER = vscrw.normalizePath(
+                        Path.join(uri.path, fi.name)
+                    );
+
+                    const CACHED_VALUE: vscode.FileType = conn.cache.stats[ FILE_OR_FOLDER ];
+                    if (_.isNil(CACHED_VALUE)) {
+                        let type: vscode.FileType | false = false;
+
+                        try {
+                            // first try to check if file ...
+                            const STREAM: any = await conn.client.get(
+                                FILE_OR_FOLDER
+                            );
+
+                            // ... yes
+                            try {
+                                if (_.isFunction(STREAM.close)) {
+                                    STREAM.close();
+                                }
+                            } catch { }
+
+                            type = vscode.FileType.File;
+                        } catch {
+                            // now try to check if directory ...
+                            try {
+                                await conn.client.list(
+                                    FILE_OR_FOLDER
+                                );
+
+                                // ... yes
+                                type = vscode.FileType.Directory;
+                            } catch { /* no, handle as symbol link */ }
+                        }
+
+                        // TODO: implement later
+                        /*
+                        if (false !== type) {
+                            conn.cache.stats[ FILE_OR_FOLDER ] = STAT.type = type;
+                        }
+                        */
+
+                        if (false !== type) {
+                            STAT.type = type;
+                        }
+                    } else {
+                        STAT.type = CACHED_VALUE;
+                    }
+                } catch {
+                    STAT.type = vscode.FileType.SymbolicLink;
+                }
+            }
+        } else if ('-' === fi.type) {
+            STAT.type = vscode.FileType.File;
+        }
+
+        if (vscode.FileType.File === STAT.type) {
+            STAT.size = fi.size;
+            STAT.ctime = fi.modifyTime;
+            STAT.mtime = fi.modifyTime;
+        }
+
+        if (isNaN( STAT.ctime )) {
+            STAT.ctime = 0;
+        }
+        if (isNaN( STAT.mtime )) {
+            STAT.mtime = 0;
+        }
+        if (isNaN( STAT.size )) {
+            STAT.size = 0;
+        }
+
+        return [ fi.name, STAT ];
+    }
 }
 
 async function tryCloseConnection(conn: SFTPConnection) {
