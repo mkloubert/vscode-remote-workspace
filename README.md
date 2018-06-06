@@ -22,17 +22,19 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
      * [Parameters](#parameters--1)
    * [FTP](#ftp-)
      * [Parameters](#parameters--2)
+   * [FTPs](#ftps-)
+     * [Parameters](#parameters--3)
    * [S3 Buckets](#s3-buckets-)
      * [credential_type](#credential_type-)
-     * [Parameters](#parameters--3)
-   * [SFTP](#sftp-)
      * [Parameters](#parameters--4)
+   * [SFTP](#sftp-)
+     * [Parameters](#parameters--5)
        * [mode](#mode-)
    * [Slack](#slack-)
-     * [Parameters](#parameters--5)
+     * [Parameters](#parameters--6)
      * [Remarks](#remarks--1)
    * [WebDAV](#webdav-)
-     * [Parameters](#parameters--6)
+     * [Parameters](#parameters--7)
 3. [Commands](#commands-)
 4. [Support and contribute](#support-and-contribute-)
 5. [Related projects](#related-projects-)
@@ -143,6 +145,29 @@ URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `keepAlive` | Defines a time interval, in seconds, that sends a `NOOP` command automatically to keep the connection alive. | `keepAlive=15` |
 | `noop` | The custom [FTP command](https://en.wikipedia.org/wiki/List_of_FTP_commands) to execute to check if connection is still alive. Default: `NOOP` | `noop=SYST` |
+
+### FTPs [[&uarr;](#how-to-use-)]
+
+URL Format: `ftps://[user:password@]host[:port][/path/to/a/folder]`
+
+```json
+{
+    "folders": [{
+        "uri": "ftps://my-user:my-password@ftps.example.com/",
+        "name": "My (secure) FTP folder"
+    }],
+    "settings": {}
+}
+```
+
+| Name | Description | Example | 
+| ---- | --------- | --------- | 
+| `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftps_server1` |
+| `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
+| `keepAlive` | Defines a time interval, in seconds, that sends a `NOOP` command automatically to keep the connection alive. Default `10` | `keepAlive=45` |
+| `legacy` | Use [ftp](https://www.npmjs.com/package/ftp) module instead of forked [@icetee/ftp](https://www.npmjs.com/package/@icetee/ftp), if you have problems. Default: `0` | `legacy=1` |
+| `rejectUnauthorized` | Reject unauthorized server certificates or not. Default: `0` | `rejectUnauthorized=1` |
+| `secure` | Use secure (`1`) or plain (`0`) FTP connection. Default: `1` | `secure=0` |
 
 ### S3 Buckets [[&uarr;](#how-to-use-)]
 

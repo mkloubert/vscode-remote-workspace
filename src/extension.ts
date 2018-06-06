@@ -31,6 +31,7 @@ import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw_fs_azure from './fs/azure';
 import * as vscrw_fs_dropbox from './fs/dropbox';
 import * as vscrw_fs_ftp from './fs/ftp';
+import * as vscrw_fs_ftps from './fs/ftps';
 import * as vscrw_fs_s3 from './fs/s3';
 import * as vscrw_fs_sftp from './fs/sftp';
 import * as vscrw_fs_slack from './fs/slack';
@@ -651,6 +652,7 @@ function getClasses() {
         vscrw_fs_s3.S3FileSystem,
         vscrw_fs_slack.SlackFileSystem,
         vscrw_fs_webdav.WebDAVFileSystem,
+        vscrw_fs_ftps.FTPsFileSystem,
     ];
 }
 
