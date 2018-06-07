@@ -160,6 +160,8 @@ URL Format: `ftps://[user:password@]host[:port][/path/to/a/folder]`
 }
 ```
 
+#### Parameters [[&uarr;](#ftps-)]
+
 | Name | Description | Example | 
 | ---- | --------- | --------- | 
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftps_server1` |
