@@ -316,7 +316,7 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
         context.subscriptions.push(
             vscode.workspace.registerFileSystemProvider(FTPsFileSystem.scheme,
                                                         new FTPsFileSystem(),
-                                                        { isCaseSensitive: false })
+                                                        { isCaseSensitive: true })
         );
     }
 
