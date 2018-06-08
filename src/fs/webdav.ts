@@ -16,7 +16,6 @@
  */
 
 import * as _ from 'lodash';
-import * as FSExtra from 'fs-extra';
 import * as Moment from 'moment';
 import * as MomentTZ from 'moment-timezone';  // REQUIRED EXTENSION FOR moment MODULE!!!
 import * as Path from 'path';
@@ -24,6 +23,7 @@ import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
+import * as vscrw_search from '../search';
 const WebDAV = require('webdav-client');
 
 interface WebDAVConnection {
@@ -410,10 +410,15 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
      * @param {vscode.ExtensionContext} context The extension context.
      */
     public static register(context: vscode.ExtensionContext) {
+        const FS_PROVIDER = new WebDAVFileSystem();
+
         context.subscriptions.push(
             vscode.workspace.registerFileSystemProvider(WebDAVFileSystem.scheme,
-                                                        new WebDAVFileSystem(),
-                                                        { isCaseSensitive: true })
+                                                        FS_PROVIDER,
+                                                        { isCaseSensitive: true }),
+
+            vscode.workspace.registerSearchProvider(WebDAVFileSystem.scheme,
+                                                    new vscrw_search.FileSystemSearchProvider(FS_PROVIDER)),
         );
     }
 

@@ -24,6 +24,7 @@ import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
+import * as vscrw_search from '../search';
 
 interface S3Connection {
     client: AWS.S3;
@@ -407,10 +408,15 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
      * @param {vscode.ExtensionContext} context The extension context.
      */
     public static register(context: vscode.ExtensionContext) {
+        const FS_PROVIDER = new S3FileSystem();
+
         context.subscriptions.push(
             vscode.workspace.registerFileSystemProvider(S3FileSystem.scheme,
-                                                        new S3FileSystem(),
-                                                        { isCaseSensitive: true })
+                                                        FS_PROVIDER,
+                                                        { isCaseSensitive: true }),
+
+            vscode.workspace.registerSearchProvider(S3FileSystem.scheme,
+                                                    new vscrw_search.FileSystemSearchProvider(FS_PROVIDER)),
         );
     }
 

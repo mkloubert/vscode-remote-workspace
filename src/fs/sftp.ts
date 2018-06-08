@@ -24,6 +24,7 @@ import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
+import * as vscrw_search from '../search';
 
 type FileModeMapper = { [mode: string]: string | string[] };
 
@@ -449,10 +450,15 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      * @param {vscode.ExtensionContext} context The extension context.
      */
     public static register(context: vscode.ExtensionContext) {
+        const FS_PROVIDER = new SFTPFileSystem();
+
         context.subscriptions.push(
             vscode.workspace.registerFileSystemProvider(SFTPFileSystem.scheme,
-                                                        new SFTPFileSystem(),
-                                                        { isCaseSensitive: true })
+                                                        FS_PROVIDER,
+                                                        { isCaseSensitive: true }),
+
+            vscode.workspace.registerSearchProvider(SFTPFileSystem.scheme,
+                                                    new vscrw_search.FileSystemSearchProvider(FS_PROVIDER)),
         );
     }
 

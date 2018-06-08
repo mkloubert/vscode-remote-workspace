@@ -27,6 +27,7 @@ import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
+import * as vscrw_search from '../search';
 
 interface FTPsConnection {
     cache: FTPsConnectionCache;
@@ -313,10 +314,15 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
      * @param {vscode.ExtensionContext} context The extension context.
      */
     public static register(context: vscode.ExtensionContext) {
+        const FS_PROVIDER = new FTPsFileSystem();
+
         context.subscriptions.push(
             vscode.workspace.registerFileSystemProvider(FTPsFileSystem.scheme,
-                                                        new FTPsFileSystem(),
-                                                        { isCaseSensitive: false })
+                                                        FS_PROVIDER,
+                                                        { isCaseSensitive: true }),
+
+            vscode.workspace.registerSearchProvider(FTPsFileSystem.scheme,
+                                                    new vscrw_search.FileSystemSearchProvider(FS_PROVIDER)),
         );
     }
 
