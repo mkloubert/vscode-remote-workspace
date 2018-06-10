@@ -106,7 +106,7 @@
         "@slack/client": "^4.3.1",
         "aws-sdk": "^2.252.1",
         "azure-storage": "^2.8.3",
-        "dropbox": "^4.0.4",
+        "dropbox": "4.0.4",
         "ftp": "^0.3.10",
         "isomorphic-fetch": "^2.2.1",
         "jsftp": "^2.1.3",

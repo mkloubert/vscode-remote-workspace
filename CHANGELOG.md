@@ -5,6 +5,13 @@
 ## 0.26.0 (???? ????, ????; file search)
 
 * implemented file search ... s. [issue #8](https://github.com/mkloubert/vscode-remote-workspace/issues/8)
+* updated the following [npm](https://www.npmjs.com/) modules:
+  * [@slack/client](https://www.npmjs.com/package/@slack/client) `^4.3.1`
+  * [aws-sdk](https://www.npmjs.com/package/aws-sdk) `^2.254.1`
+  * [azure-storage](https://www.npmjs.com/package/azure-storage) `^2.8.3`
+  * [moment](https://www.npmjs.com/package/moment) `^2.22.2`
+  * [vscode-helpers](https://www.npmjs.com/package/vscode-helpers) `^2.6.2`
+  * [webdav-client](https://www.npmjs.com/package/webdav-client) `^1.4.2`
 
 ## 0.25.0 (June 9th, 2018; special modes for folders)
 
@@ -12,18 +19,8 @@
 
 ## 0.24.2 (June 6th, 2018; FTPS connections)
 
-* code cleanups and improvements
-* bugfixes
-* updated the following [npm](https://www.npmjs.com/) modules:
-  * [@slack/client](https://www.npmjs.com/package/@slack/client) `^4.3.1`
-  * [aws-sdk](https://www.npmjs.com/package/aws-sdk) `^2.252.1`
-  * [azure-storage](https://www.npmjs.com/package/azure-storage) `^2.8.3`
-  * [moment](https://www.npmjs.com/package/moment) `^2.22.2`
-  * [vscode-helpers](https://www.npmjs.com/package/vscode-helpers) `^2.6.2`
-
-## 0.24.1 (June 6th, 2018; FTPS connections)
-
 * implemented support for secure `ftps` protocol ... s. [issue #6](https://github.com/mkloubert/vscode-remote-workspace/issues/6)
+* bugfixes
 
 ## 0.23.0 (May 30th, 2018; keep file permissions for SFTP files)
 
