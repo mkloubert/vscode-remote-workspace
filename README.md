@@ -227,6 +227,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 | `allowedHashes` | Comma-separated list of hashes to verify. | `allowedHashes=md5,sha-1` |
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftp_server1` |
 | `debug` | Set to `1`, to debug a connection. The logs will be written to `.vscode-remote-workspace/.logs` sub folder inside the user's home directory. Default: `0` | `debug=1` |
+| `dirMode` | Defines a special [chmod](https://en.wikipedia.org/wiki/Chmod) access permission value for the folders on server. This can be an octal number or the path to a JSON file, that contains a "mapper" object. If not defined, the value of `mode` parameter is used. s. [mode](#mode-) for more information. | `dirMode=755` |
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |
 | `keepAlive` | Defines a time interval, in seconds, that sends "keep alive packages" automatically. | `keepAlive=15` |
@@ -241,7 +242,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=valu
 
 ##### mode [[&uarr;](#parameters--4)]
 
-For that parameter, you can define an octal number, which will be applied to all files and folders, which are created or changed.
+For the parameters `dirMode` and `mode`, you can define an octal number, which will be applied to all files and folders, which are created or changed.
 
 You also can define a path to a JSON file, which contains a mapper object:
 

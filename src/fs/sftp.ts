@@ -30,7 +30,7 @@ type FileModeMapper = { [mode: string]: string | string[] };
 
 interface SFTPConnection {
     cache: SFTPConnectionCache;
-    changeMode: (u: vscode.Uri, m?: number) => PromiseLike<boolean>;
+    changeMode: (ft: vscode.FileType, u: vscode.Uri, m?: number) => PromiseLike<boolean>;
     client: SFTP;
     followSymLinks: boolean;
     keepMode: boolean;
@@ -50,6 +50,8 @@ interface SFTPFileRights {
 interface SFTPFileStat extends vscode.FileStat {
     __vscrw_fileinfo: SFTP.FileInfo;
 }
+
+type STPModeValueOrPath = string | number | false;
 
 /**
  * SFTP file system.
@@ -75,7 +77,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 vscrw.normalizePath(uri.path), true
             );
 
-            await conn.changeMode(uri);
+            await conn.changeMode(vscode.FileType.Directory, uri);
         });
     }
 
@@ -145,12 +147,27 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri, 22);
 
             const MODE = vscode_helpers.toStringSafe( PARAMS['mode'] );
-            let modeValueOrPath: string | number | false = false;
-            if (!vscode_helpers.isEmptyString(MODE)) {
-                modeValueOrPath = parseInt(MODE.trim());
 
-                if (isNaN(modeValueOrPath)) {
-                    modeValueOrPath = MODE;
+            let dirMode = vscode_helpers.toStringSafe( PARAMS['dirmode'] );
+            if (vscode_helpers.isEmptyString(dirMode)) {
+                dirMode = MODE;
+            }
+
+            let fileModeValueOrPath: STPModeValueOrPath = false;
+            if (!vscode_helpers.isEmptyString(MODE)) {
+                fileModeValueOrPath = parseInt(MODE.trim());
+
+                if (isNaN(fileModeValueOrPath)) {
+                    fileModeValueOrPath = MODE;
+                }
+            }
+
+            let dirModeValueOrPath: STPModeValueOrPath = false;
+            if (!vscode_helpers.isEmptyString(dirMode)) {
+                dirModeValueOrPath = parseInt(dirMode.trim());
+
+                if (isNaN(dirModeValueOrPath)) {
+                    dirModeValueOrPath = dirMode;
                 }
             }
 
@@ -163,7 +180,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 cache: {
                     stats: {}
                 },
-                changeMode: (u, m) => {
+                changeMode: (ft, u, m?) => {
                     const LOG_TAG = `fs.sftp.openConnection.changeMode(${ u })`;
 
                     m = parseInt(
@@ -195,9 +212,14 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                                 COMPLETED(null);
                             };
 
-                            let modeValueOrPathToUse = modeValueOrPath;
-
-                            if (!isNaN(m)) {
+                            let modeValueOrPathToUse: STPModeValueOrPath = false;
+                            if (isNaN(m)) {
+                                if (vscode.FileType.Directory === ft) {
+                                    modeValueOrPathToUse = dirModeValueOrPath;
+                                } else {
+                                    modeValueOrPathToUse = fileModeValueOrPath;
+                                }
+                            } else {
                                 // use explicit value
                                 modeValueOrPathToUse = m;
                             }
@@ -481,7 +503,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 vscrw.normalizePath( newUri.path ),
             );
 
-            await conn.changeMode(newUri);
+            await conn.changeMode(OLD_STAT.type, newUri);
         });
     }
 
@@ -644,7 +666,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 vscrw.normalizePath( uri.path ),
             );
 
-            await conn.changeMode(uri, oldMod);
+            await conn.changeMode(vscode.FileType.File, uri, oldMod);
         });
     }
 }
