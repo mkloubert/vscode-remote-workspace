@@ -75,6 +75,18 @@ interface WorkspaceQuickPickItem extends vscode.QuickPickItem {
 
 const DEFAULT_SHARE_URI_PORT = 1248;
 /**
+ * Name, which tells search providers to clear their file search caches.
+ */
+export const EVENT_CLEAR_FILE_SEARCH_CACHE = 'vscrwClearFileSearchCache';
+/**
+ * Name, which tells search providers to clear all of their search caches.
+ */
+export const EVENT_CLEAR_SEARCH_CACHE = 'vscrwClearSearchCache';
+/**
+ * Name, which tells search providers to clear their text search caches.
+ */
+export const EVENT_CLEAR_TEXT_SEARCH_CACHE = 'vscrwClearTextSearchCache';
+/**
  * The name of the extension's directory inside the user's home directory.
  */
 export const EXTENSION_DIR = '.vscode-remote-workspace';
@@ -183,6 +195,36 @@ export async function activate(context: vscode.ExtensionContext) {
     // commands
     WF.next(() => {
         context.subscriptions.push(
+            // clearFileSearchCache
+            vscode.commands.registerCommand('extension.remote.workspace.clearFileSearchCache', async () => {
+                try {
+                    vscode_helpers.EVENTS.emit(EVENT_CLEAR_FILE_SEARCH_CACHE,
+                                               null);
+                } catch (e) {
+                    showError(e);
+                }
+            }),
+
+            // clearSearchCache
+            vscode.commands.registerCommand('extension.remote.workspace.clearSearchCache', async () => {
+                try {
+                    vscode_helpers.EVENTS.emit(EVENT_CLEAR_SEARCH_CACHE,
+                                               null);
+                } catch (e) {
+                    showError(e);
+                }
+            }),
+
+            // clearTextSearchCache
+            vscode.commands.registerCommand('extension.remote.workspace.clearTextSearchCache', async () => {
+                try {
+                    vscode_helpers.EVENTS.emit(EVENT_CLEAR_TEXT_SEARCH_CACHE,
+                                               null);
+                } catch (e) {
+                    showError(e);
+                }
+            }),
+
             // openURI
             vscode.commands.registerCommand('extension.remote.workspace.openURI', async () => {
                 try {
@@ -537,8 +579,9 @@ export function deactivate() {
     if (isDeactivating) {
         return;
     }
-
     isDeactivating = true;
+
+    vscode_helpers.EVENTS.removeAllListeners();
 }
 
 /**

@@ -15,20 +15,46 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import * as _ from 'lodash';
 import * as Path from 'path';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscode from 'vscode';
 import * as vscrw from './extension';
 import * as vscrw_fs from './fs';
 
-interface SearchFilesAndFoldersOptions {
+type FileSearchCache = { [rootFolderUri: string]: FileSearchCachePatterns; };
+type FileSearchCachePatterns = { [pattern: string]: FileSearchCachePatternResults; };
+type FileSearchCachePatternResults = { [folderUri: string]: FileSearchItem[]; };
+
+type FileTextSearchCache = { [rootFolderUri: string]: FileTextSearchCachePatterns; };
+type FileTextSearchCachePatterns = { [pattern: string]: FileTextSearchCachePatternResults; };
+type FileTextSearchCachePatternResults = { [folderUri: string]: FileTextSearchItem[]; };
+
+interface FileSearchItem {
+    name: string;
+    type: vscode.FileType;
+}
+
+interface FileTextSearchItem {
+    cache: { [ uri: string ]: FileTextSearchItemCacheItem; };
+    name: string;
+    type: vscode.FileType;
+}
+
+interface FileTextSearchItemCacheItem {
+    data: Buffer;
+    stat: vscode.FileStat;
+}
+
+interface SearchFilesAndFoldersOptions extends WithGlobPatterns {
     readonly checkIfPathMatches: (path: string, report?: boolean) => boolean;
     folder: vscode.Uri;
     readonly isCancellationRequested: boolean;
     readonly rootFolder: vscode.Uri;
+    readonly searchCache: FileSearchCachePatterns;
 }
 
-interface SearchFolderForTextOptions {
+interface SearchFolderForTextOptions extends WithGlobPatterns {
     readonly doesPathMatch: (path: string) => boolean;
     readonly encoding: string;
     folder: vscode.Uri;
@@ -36,13 +62,27 @@ interface SearchFolderForTextOptions {
     readonly isCaseSensitive: boolean;
     readonly pattern: string;
     readonly rootFolder: vscode.Uri;
+    readonly searchCache: FileTextSearchCachePatterns;
     readonly searchLine: (line: string, path: string, lineNr: number, report?: boolean) => number[];
 }
+
+interface WithGlobPatterns {
+    readonly excludePatterns: string[];
+    readonly includePatterns: string[];
+}
+
+const MAX_FILE_SIZE = 1024 * 1024;
 
 /**
  * A generic search provider for a file system.
  */
 export class FileSystemSearchProvider extends vscode_helpers.DisposableBase implements vscode.SearchProvider {
+    private readonly _CLEAR_FILE_SEARCH_CACHE_LISTENER: Function;
+    private readonly _CLEAR_SEARCH_CACHE_LISTENER: Function;
+    private readonly _CLEAR_TEXT_SEARCH_CACHE_LISTENER: Function;
+    private _fileSearchCache: FileSearchCache;
+    private _fileTextSearchCache: FileTextSearchCache;
+
     /**
      * Initializes a new instance of that class.
      *
@@ -50,6 +90,38 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
      */
     constructor(public readonly provider: vscrw_fs.FileSystemBase) {
         super();
+
+        this.clearSearchCache();
+
+        this._CLEAR_FILE_SEARCH_CACHE_LISTENER = () => {
+            this.clearFileSearchCache();
+        };
+        this._CLEAR_SEARCH_CACHE_LISTENER = () => {
+            this.clearSearchCache();
+        };
+        this._CLEAR_TEXT_SEARCH_CACHE_LISTENER = () => {
+            this.clearFileTextSearchCache();
+        };
+
+        vscode_helpers.EVENTS.addListener(vscrw.EVENT_CLEAR_FILE_SEARCH_CACHE,
+                                          this._CLEAR_FILE_SEARCH_CACHE_LISTENER);
+        vscode_helpers.EVENTS.addListener(vscrw.EVENT_CLEAR_SEARCH_CACHE,
+                                          this._CLEAR_SEARCH_CACHE_LISTENER);
+        vscode_helpers.EVENTS.addListener(vscrw.EVENT_CLEAR_TEXT_SEARCH_CACHE,
+                                          this._CLEAR_SEARCH_CACHE_LISTENER);
+    }
+
+    private clearFileSearchCache() {
+        this._fileSearchCache = {};
+    }
+
+    private clearFileTextSearchCache() {
+        this._fileTextSearchCache = {};
+    }
+
+    private clearSearchCache() {
+        this.clearFileSearchCache();
+        this.clearFileTextSearchCache();
     }
 
     /**
@@ -60,11 +132,33 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
     }
 
     /** @inheritdoc */
+    protected onDispose() {
+        vscode_helpers.EVENTS
+                      .removeListener(vscrw.EVENT_CLEAR_FILE_SEARCH_CACHE,
+                                      this._CLEAR_FILE_SEARCH_CACHE_LISTENER);
+
+        vscode_helpers.EVENTS
+                      .removeListener(vscrw.EVENT_CLEAR_SEARCH_CACHE,
+                                      this._CLEAR_SEARCH_CACHE_LISTENER);
+
+        vscode_helpers.EVENTS
+                      .removeListener(vscrw.EVENT_CLEAR_TEXT_SEARCH_CACHE,
+                                      this._CLEAR_TEXT_SEARCH_CACHE_LISTENER);
+    }
+
+    /** @inheritdoc */
     public async provideFileSearchResults(
         options: vscode.FileSearchOptions,
         progress: vscode.Progress<string>,
         token: vscode.CancellationToken,
     ) {
+        const SEARCH_CACHE_KEY = `${ options.folder }`;
+
+        let searchCache = this._fileSearchCache[ SEARCH_CACHE_KEY ];
+        if (_.isNil(searchCache)) {
+            this._fileSearchCache[ SEARCH_CACHE_KEY ] = searchCache = {};
+        }
+
         const FILES_TO_INCLUDE = vscode_helpers.asArray(options.includes).map(x => {
             return vscode_helpers.toStringSafe(x);
         }).filter(x => {
@@ -99,9 +193,12 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
 
                 return false;
             },
+            excludePatterns: FILES_TO_EXCLUDE,
             folder: options.folder,
+            includePatterns: FILES_TO_INCLUDE,
             isCancellationRequested: undefined,
             rootFolder: options.folder,
+            searchCache: searchCache,
         };
 
         // OPTS.isCancellationRequested
@@ -125,6 +222,13 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
         progress: vscode.Progress<vscode.TextSearchResult>,
         token: vscode.CancellationToken
     ) {
+        const SEARCH_CACHE_KEY = `${ options.folder }`;
+
+        let searchCache = this._fileTextSearchCache[ SEARCH_CACHE_KEY ];
+        if (_.isNil(searchCache)) {
+            this._fileTextSearchCache[ SEARCH_CACHE_KEY ] = searchCache = {};
+        }
+
         let enc = vscode_helpers.normalizeString(options.encoding);
         if ('' === enc) {
             enc = 'utf8';
@@ -150,11 +254,14 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
                 );
             },
             encoding: enc,
+            excludePatterns: FILES_TO_EXCLUDE,
             folder: options.folder,
+            includePatterns: FILES_TO_INCLUDE,
             isCancellationRequested: undefined,
             isCaseSensitive: undefined,
             pattern: vscode_helpers.toStringSafe(query.pattern),
             rootFolder: options.folder,
+            searchCache: searchCache,
             searchLine: function(line, path, lineNr, report?) {
                 report = vscode_helpers.toBooleanSafe(report, true);
 
@@ -238,24 +345,35 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
         const FOLDER = opts.folder;
         const FOLDER_PATH = vscrw.normalizePath(FOLDER.path);
 
-        const LIST = vscode_helpers.from( await this.provider.readDirectory(FOLDER) ).select(x => {
-            return {
-                name: x[0],
-                type: x[1],
-            };
-        }).orderBy(x => {
-            switch (x.type) {
-                case vscode.FileType.File:
-                    return -2;
+        const SEARCH_PATTERN_KEY = generateCacheKeyForPatterns(opts);
+        const SEARCH_PATTERN_FOLDER_KEY = `${ FOLDER }`;
 
-                case vscode.FileType.Directory:
-                    return -1;
-            }
+        let searchPatterns = opts.searchCache[ SEARCH_PATTERN_KEY ];
+        if (_.isNil(searchPatterns)) {
+            opts.searchCache[ SEARCH_PATTERN_KEY ] = searchPatterns = {};
+        }
 
-            return 0;
-        }).toArray();
+        let list = searchPatterns[ SEARCH_PATTERN_FOLDER_KEY ];
+        if (_.isNil(list)) {
+            searchPatterns[ SEARCH_PATTERN_FOLDER_KEY ] = list = vscode_helpers.from( await this.provider.readDirectory(FOLDER) ).select(x => {
+                return {
+                    name: x[0],
+                    type: x[1],
+                };
+            }).orderBy(x => {
+                switch (x.type) {
+                    case vscode.FileType.File:
+                        return -2;
 
-        for (const ITEM of LIST) {
+                    case vscode.FileType.Directory:
+                        return -1;
+                }
+
+                return 0;
+            }).toArray();
+        }
+
+        for (const ITEM of list) {
             if (opts.isCancellationRequested) {
                 break;
             }
@@ -294,24 +412,36 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
         const FOLDER = opts.folder;
         const FOLDER_PATH = vscrw.normalizePath(FOLDER.path);
 
-        const LIST = vscode_helpers.from( await this.provider.readDirectory(FOLDER) ).select(x => {
-            return {
-                name: x[0],
-                type: x[1],
-            };
-        }).orderBy(x => {
-            switch (x.type) {
-                case vscode.FileType.File:
-                    return -2;
+        const SEARCH_PATTERN_KEY = generateCacheKeyForPatterns(opts);
+        const SEARCH_PATTERN_FOLDER_KEY = `${ FOLDER }`;
 
-                case vscode.FileType.Directory:
-                    return -1;
-            }
+        let searchPatterns = opts.searchCache[ SEARCH_PATTERN_KEY ];
+        if (_.isNil(searchPatterns)) {
+            opts.searchCache[ SEARCH_PATTERN_KEY ] = searchPatterns = {};
+        }
 
-            return 0;
-        }).toArray();
+        let list = searchPatterns[ SEARCH_PATTERN_FOLDER_KEY ];
+        if (_.isNil(list)) {
+            searchPatterns[ SEARCH_PATTERN_FOLDER_KEY ] = list = vscode_helpers.from( await this.provider.readDirectory(FOLDER) ).select(x => {
+                return {
+                    cache: {},
+                    name: x[0],
+                    type: x[1],
+                };
+            }).orderBy(x => {
+                switch (x.type) {
+                    case vscode.FileType.File:
+                        return -2;
 
-        for (const ITEM of LIST) {
+                    case vscode.FileType.Directory:
+                        return -1;
+                }
+
+                return 0;
+            }).toArray();
+        }
+
+        for (const ITEM of list) {
             if (opts.isCancellationRequested) {
                 break;
             }
@@ -330,22 +460,38 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
                         continue;
                     }
 
-                    const STAT = await this.provider.stat( ITEM_URI );
+                    const FILE_ITEM_CACHE_KEY = `${ ITEM_URI }`;
 
-                    if (STAT.size > 0 && STAT.size <= (1024 * 1024)) {
-                        const FILE_DATA = vscrw.asBuffer(
-                            await this.provider.readFile( ITEM_URI )
-                        );
+                    let cacheItem = ITEM.cache[ FILE_ITEM_CACHE_KEY ];
+                    if (_.isNil(cacheItem)) {
+                        ITEM.cache[ FILE_ITEM_CACHE_KEY ] = cacheItem = {
+                            data: undefined,
+                            stat: await this.provider.stat( ITEM_URI ),
+                        };
+                    }
 
-                        if (!(await vscode_helpers.isBinaryContent(FILE_DATA))) {
-                            const TXT = FILE_DATA.toString(opts.encoding);
-                            const TXT_LINES = TXT.split("\n");
+                    if (_.isNil(cacheItem.data)) {
+                        if (cacheItem.stat.size < 1) {
+                            cacheItem.data = Buffer.alloc(0);
+                        } else if (cacheItem.stat.size <= MAX_FILE_SIZE) {
+                            cacheItem.data = vscrw.asBuffer(
+                                await this.provider.readFile( ITEM_URI )
+                            );
+                        }
+                    }
 
-                            for (let i = 0; i < TXT_LINES.length; i++) {
-                                opts.searchLine(TXT_LINES[i],
-                                                ITEM_PATH, i,
-                                                true);
-                            }
+                    if (_.isNil(cacheItem.data)) {
+                        continue;
+                    }
+
+                    if (!(await vscode_helpers.isBinaryContent(cacheItem.data))) {
+                        const TXT = cacheItem.data.toString(opts.encoding);
+                        const TXT_LINES = TXT.split("\n");
+
+                        for (let i = 0; i < TXT_LINES.length; i++) {
+                            opts.searchLine(TXT_LINES[i],
+                                            ITEM_PATH, i,
+                                            true);
                         }
                     }
                 } else if (ITEM.type === vscode.FileType.Directory) {
@@ -359,6 +505,15 @@ export class FileSystemSearchProvider extends vscode_helpers.DisposableBase impl
             }
         }
     }
+}
+
+function generateCacheKeyForPatterns(obj: WithGlobPatterns) {
+    return `${ obj.includePatterns
+                  .map(x => 'INC: ' + x)
+                  .join("\n") }\r\n\r\n${
+               obj.excludePatterns
+                  .map(x => 'EXC: ' + x)
+                  .join("\n") }`;
 }
 
 function doesPathMatch(path: any, filesToInclude: string[], filesToExclude: string[]) {

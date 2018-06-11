@@ -37,6 +37,7 @@
         "onFileSystemAccess:slack",
         "onFileSystem:webdav",
         "onFileSystemAccess:webdav",
+        "onCommand:extension.remote.workspace.clearSearchCache",
         "onCommand:extension.remote.workspace.openURI",
         "onCommand:extension.remote.workspace.receiveWorkspaceURI",
         "onCommand:extension.remote.workspace.sendWorkspaceURI"
@@ -44,6 +45,21 @@
     "main": "./out/extension",
     "contributes": {
         "commands": [
+            {
+                "command": "extension.remote.workspace.clearSearchCache",
+                "title": "Clear All Search Caches ...",
+                "category": "Remote Workspace"
+            },
+            {
+                "command": "extension.remote.workspace.clearFileSearchCache",
+                "title": "Clear File Search Cache ...",
+                "category": "Remote Workspace"
+            },
+            {
+                "command": "extension.remote.workspace.clearTextSearchCache",
+                "title": "Clear Text Search Cache ...",
+                "category": "Remote Workspace"
+            },
             {
                 "command": "extension.remote.workspace.openURI",
                 "title": "Open URI ...",
