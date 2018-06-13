@@ -48,6 +48,44 @@ interface FTPDirectoryItem {
  */
 export class FTPFileSystem extends vscrw_fs.FileSystemBase {
     private readonly _CONN_CACHE: any = {};
+    private readonly _EXECUTE_REMOTE_COMMAND_LISTENER: Function;
+
+    /**
+     * Initializes a new instance of that class.
+     */
+    public constructor() {
+        super();
+
+        this._EXECUTE_REMOTE_COMMAND_LISTENER = (execArgs: vscrw.ExecuteRemoteCommandArguments) => {
+            execArgs.increaseExecutionCounter();
+
+            (async () => {
+                try {
+                    if (FTPFileSystem.scheme === vscode_helpers.normalizeString(execArgs.uri.scheme)) {
+                        const RESPONSE = await this.executeRemoteCommand(execArgs);
+
+                        if (execArgs.callback) {
+                            execArgs.callback(null, {
+                                stdOut: RESPONSE,
+                            });
+                        }
+                    }
+                } catch (e) {
+                    if (execArgs.callback) {
+                        execArgs.callback(e);
+                    } else {
+                        throw e;
+                    }
+                }
+            })().then(() => {
+            }, (err) => {
+                vscrw.showError(err);
+            });
+        };
+
+        vscode_helpers.EVENTS.on(vscrw.EVENT_EXECUTE_REMOTE_COMMAND,
+                                 this._EXECUTE_REMOTE_COMMAND_LISTENER);
+    }
 
     /**
      * @inheritdoc
@@ -233,6 +271,18 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
         });
     }
 
+    private async executeRemoteCommand(execArgs: vscrw.ExecuteRemoteCommandArguments) {
+        const CONN = await this.openConnection(execArgs.uri, true);
+
+        try {
+            await executeServerCommand(CONN.client, 'CWD ' + vscrw.normalizePath(execArgs.uri.path));
+
+            return await executeServerCommand(CONN.client, execArgs.command);
+        } finally {
+            await tryCloseConnection(CONN);
+        }
+    }
+
     private async forConnection<TResult = any>(
         uri: vscode.Uri, action: (conn: FTPConnection) => TResult | PromiseLike<TResult>,
         existingConn?: FTPConnection
@@ -276,18 +326,28 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 delete this._CONN_CACHE[ CACHE_KEY ];
             }
         }
+
+        vscode_helpers.tryRemoveListener(
+            vscode_helpers.EVENTS,
+            vscrw.EVENT_EXECUTE_REMOTE_COMMAND, this._EXECUTE_REMOTE_COMMAND_LISTENER
+        );
     }
 
-    private async openConnection(uri: vscode.Uri): Promise<FTPConnection> {
+    private async openConnection(uri: vscode.Uri, noCache?: boolean): Promise<FTPConnection> {
         // format:
         //
         // ftp://[user:password@]host:port[/path/to/file/or/folder]
+
+        noCache = vscode_helpers.toBooleanSafe(noCache);
 
         const CACHE_KEY = vscrw.getConnectionCacheKey( uri );
 
         const PARAMS = vscrw.uriParamsToObject(uri);
 
-        let conn = await this.testConnection( CACHE_KEY );
+        let conn: FTPConnection | false = false;
+        if (!noCache) {
+            conn = await this.testConnection(CACHE_KEY);
+        }
 
         if (false === conn) {
             const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri, 21);
@@ -408,13 +468,19 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
     public static register(context: vscode.ExtensionContext) {
         const NEW_FS = new FTPFileSystem();
 
-        context.subscriptions.push(
-            NEW_FS,
+        try {
+            context.subscriptions.push(
+                NEW_FS,
 
-            vscode.workspace.registerFileSystemProvider(FTPFileSystem.scheme,
-                                                        NEW_FS,
-                                                        { isCaseSensitive: true }),
-        );
+                vscode.workspace.registerFileSystemProvider(FTPFileSystem.scheme,
+                                                            NEW_FS,
+                                                            { isCaseSensitive: true }),
+            );
+        } catch (e) {
+            vscode_helpers.tryDispose( NEW_FS );
+
+            throw e;
+        }
     }
 
     /**
@@ -606,6 +672,44 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
             });
         });
     }
+}
+
+
+function executeServerCommand(conn: any, cmd: string) {
+    cmd = vscode_helpers.toStringSafe(cmd);
+
+    return new Promise<Buffer>((resolve, reject) => {
+        const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+
+        try {
+            const PARTS = cmd.split(' ')
+                             .filter(x => '' !== x.trim());
+
+            let c: string;
+            if (PARTS.length > 0) {
+                c = PARTS[0].trim();
+            }
+
+            const ARGS = PARTS.filter((a, i) => i > 0);
+
+            conn.raw(c, ARGS, function(err, result) {
+                if (err) {
+                    COMPLETED( err );
+                } else {
+                    let response: Buffer;
+                    if (_.isNil(result)) {
+                        response = result;
+                    } else {
+                        response = new Buffer(`[${ result.code }] '${ vscode_helpers.toStringSafe(result.text) }'`, 'ascii');
+                    }
+
+                    COMPLETED(null, response);
+                }
+            });
+        } catch (e) {
+            COMPLETED(e);
+        }
+    });
 }
 
 function listDirectory(conn: any, path: string) {

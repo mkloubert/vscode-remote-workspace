@@ -36,8 +36,9 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
    * [WebDAV](#webdav-)
      * [Parameters](#parameters--7)
 3. [Commands](#commands-)
-4. [Support and contribute](#support-and-contribute-)
-5. [Related projects](#related-projects-)
+4. [Logs](#logs-)
+5. [Support and contribute](#support-and-contribute-)
+6. [Related projects](#related-projects-)
    * [node-simple-socket](#node-simple-socket-)
    * [vscode-helpers](#vscode-helpers-)
 
@@ -312,11 +313,20 @@ URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?opti
 
 Press `F1` and enter one of the following commands:
 
-| Name | Description |
-| ---- | --------- |
-| `Remote Workspace: Open URI ...` | Adds / opens a new workspace folder with a [supported URI](#how-to-use-). |
-| `Remote Workspace: Receive Remote URI ...` | Receives a remote URI from another editor. |
-| `Remote Workspace: Share Remote URI ...` | Shares a remote URI with another editor. |
+| Name | Description | ID |
+| ---- | ----------- | -- |
+| `Remote Workspace: Execute 'git' Command ...` | Executes `git` CLI tool on a remote workspace. | `extension.remote.workspace.executeGit` |
+| `Remote Workspace: Execute Remote Command ...` | Executes a command on a remote workspace. | `extension.remote.workspace.executeRemoteCommmand` |
+| `Remote Workspace: Open URI ...` | Adds / opens a new workspace folder with a [supported URI](#how-to-use-). | `extension.remote.workspace.openURI` |
+| `Remote Workspace: Receive Remote URI ...` | Receives a remote URI from another editor. | `extension.remote.workspace.receiveWorkspaceURI` |
+| `Remote Workspace: Reset Remote Command History ...` | Resets all values of last executed remote commands. | `extension.remote.workspace.resetRemoteCommandHistory` |
+| `Remote Workspace: Share Remote URI ...` | Shares a remote URI with another editor. | `extension.remote.workspace.sendWorkspaceURI` |
+
+If you want to define shortcuts for one or more command(s), have a look at the article [Key Bindings for Visual Studio Code](https://code.visualstudio.com/docs/getstarted/keybindings).
+
+## Logs [[&uarr;](#table-of-contents)]
+
+Log files are stored inside the `.vscode-remote-workspace/.logs` subfolder of the user's home directory, separated by day.
 
 ## Support and contribute [[&uarr;](#table-of-contents)]
 

@@ -57,6 +57,44 @@ type STPModeValueOrPath = string | number | false;
  */
 export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
     private readonly _CONN_CACHE: any = {};
+    private readonly _EXECUTE_REMOTE_COMMAND_LISTENER: Function;
+
+    /**
+     * Initializes a new instance of that class.
+     */
+    public constructor() {
+        super();
+
+        this._EXECUTE_REMOTE_COMMAND_LISTENER = (execArgs: vscrw.ExecuteRemoteCommandArguments) => {
+            execArgs.increaseExecutionCounter();
+
+            (async () => {
+                try {
+                    if (SFTPFileSystem.scheme === vscode_helpers.normalizeString(execArgs.uri.scheme)) {
+                        const RESPONSE = await this.executeRemoteCommand(execArgs);
+
+                        if (execArgs.callback) {
+                            execArgs.callback(null, {
+                                stdOut: RESPONSE,
+                            });
+                        }
+                    }
+                } catch (e) {
+                    if (execArgs.callback) {
+                        execArgs.callback(e);
+                    } else {
+                        throw e;
+                    }
+                }
+            })().then(() => {
+            }, (err) => {
+                vscrw.showError(err);
+            });
+        };
+
+        vscode_helpers.EVENTS.on(vscrw.EVENT_EXECUTE_REMOTE_COMMAND,
+                                 this._EXECUTE_REMOTE_COMMAND_LISTENER);
+    }
 
     /**
      * @inheritdoc
@@ -99,6 +137,20 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         });
     }
 
+    private async executeRemoteCommand(execArgs: vscrw.ExecuteRemoteCommandArguments) {
+        const CONN = await this.openConnection(execArgs.uri, true);
+
+        try {
+            return await this.forConnection(execArgs.uri, (conn) => {
+                return execServerCommand(
+                    conn.client, `cd "${ execArgs.uri.path }" && ${ execArgs.command }`
+                );
+            }, CONN);
+        } finally {
+            await tryCloseConnection(CONN);
+        }
+    }
+
     private async forConnection<TResult = any>(
         uri: vscode.Uri, action: (conn: SFTPConnection) => TResult | PromiseLike<TResult>,
         existingConn?: SFTPConnection
@@ -129,18 +181,28 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         for (const CACHE_KEY of Object.keys(this._CONN_CACHE)) {
             this.tryCloseAndDeleteConnectionSync( CACHE_KEY );
         }
+
+        vscode_helpers.tryRemoveListener(
+            vscode_helpers.EVENTS,
+            vscrw.EVENT_EXECUTE_REMOTE_COMMAND, this._EXECUTE_REMOTE_COMMAND_LISTENER
+        );
     }
 
-    private async openConnection(uri: vscode.Uri): Promise<SFTPConnection> {
+    private async openConnection(uri: vscode.Uri, noCache?: boolean): Promise<SFTPConnection> {
         // format:
         //
         // sftp://[user:password@]host:port[/path/to/file/or/folder]
+
+        noCache = vscode_helpers.toBooleanSafe(noCache);
 
         const CACHE_KEY = vscrw.getConnectionCacheKey( uri );
 
         const PARAMS = vscrw.uriParamsToObject(uri);
 
-        let conn = await this.testConnection( CACHE_KEY );
+        let conn: SFTPConnection | false = false;
+        if (!noCache) {
+            conn = await this.testConnection(CACHE_KEY);
+        }
 
         if (false === conn) {
             const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri, 22);
@@ -471,11 +533,18 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      * @param {vscode.ExtensionContext} context The extension context.
      */
     public static register(context: vscode.ExtensionContext) {
-        context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider(SFTPFileSystem.scheme,
-                                                        new SFTPFileSystem(),
-                                                        { isCaseSensitive: true })
-        );
+        const FS_PROVIDER = new SFTPFileSystem();
+        try {
+            context.subscriptions.push(
+                vscode.workspace.registerFileSystemProvider(SFTPFileSystem.scheme,
+                                                            FS_PROVIDER,
+                                                            { isCaseSensitive: true })
+            );
+        } catch (e) {
+            vscode_helpers.tryDispose( FS_PROVIDER );
+
+            throw e;
+        }
     }
 
     /**

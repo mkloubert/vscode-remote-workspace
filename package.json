@@ -2,7 +2,7 @@
     "name": "vscode-remote-workspace",
     "displayName": "Remote Workspace",
     "description": "Multi protocol support (like Azure, Dropbox, S3, (S)FTP or Slack) for handling remote files like local ones.",
-    "version": "0.25.0",
+    "version": "0.26.0",
     "publisher": "mkloubert",
     "engines": {
         "vscode": "^1.23.0"
@@ -36,13 +36,26 @@
         "onFileSystemAccess:slack",
         "onFileSystem:webdav",
         "onFileSystemAccess:webdav",
+        "onCommand:extension.remote.workspace.executeGit",
+        "onCommand:extension.remote.workspace.executeRemoteCommmand",
         "onCommand:extension.remote.workspace.openURI",
         "onCommand:extension.remote.workspace.receiveWorkspaceURI",
+        "onCommand:extension.remote.workspace.resetRemoteCommandHistory",
         "onCommand:extension.remote.workspace.sendWorkspaceURI"
     ],
     "main": "./out/extension",
     "contributes": {
         "commands": [
+            {
+                "command": "extension.remote.workspace.executeGit",
+                "title": "Execute 'git' Command ...",
+                "category": "Remote Workspace"
+            },
+            {
+                "command": "extension.remote.workspace.executeRemoteCommmand",
+                "title": "Execute Remote Command ...",
+                "category": "Remote Workspace"
+            },
             {
                 "command": "extension.remote.workspace.openURI",
                 "title": "Open URI ...",
@@ -51,6 +64,11 @@
             {
                 "command": "extension.remote.workspace.receiveWorkspaceURI",
                 "title": "Receive Remote URI ...",
+                "category": "Remote Workspace"
+            },
+            {
+                "command": "extension.remote.workspace.resetRemoteCommandHistory",
+                "title": "Reset Remote Command History ...",
                 "category": "Remote Workspace"
             },
             {
