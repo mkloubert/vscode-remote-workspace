@@ -459,7 +459,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 };
             }
 
-            await this.tryCloseAndDeleteConnection( CACHE_KEY );
+            if (!noCache) {
+                await this.tryCloseAndDeleteConnection( CACHE_KEY );
+            }
 
             if (tryKeyboard) {
                 const PWD = vscode_helpers.toStringSafe( HOST_AND_CRED.password );
@@ -477,7 +479,10 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             await conn.client.connect(
                 OPTS
             );
-            this._CONN_CACHE[ CACHE_KEY ] = conn;
+
+            if (!noCache) {
+                this._CONN_CACHE[ CACHE_KEY ] = conn;
+            }
         }
 
         return conn;

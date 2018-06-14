@@ -245,7 +245,9 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
                     });
 
                     CLIENT.once('ready', () => {
-                        // tryCloseConnection( this._CONN_CACHE[ CACHE_KEY ] );
+                        // if (!noCache) {
+                        //     tryCloseConnection( this._CONN_CACHE[ CACHE_KEY ] );
+                        // }
 
                         const NEW_CONN: FTPsConnection = {
                             cache: {
@@ -254,7 +256,10 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
                             client: CLIENT,
                             followSymLinks: FOLLOW,
                         };
-                        // this._CONN_CACHE[ CACHE_KEY ] = NEW_CONN;
+
+                        // if (!noCache) {
+                        //     this._CONN_CACHE[ CACHE_KEY ] = NEW_CONN;
+                        // }
 
                         COMPLETED(null, NEW_CONN);
                     });

@@ -361,8 +361,11 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 noop = undefined;
             }
 
-            tryCloseConnection( this._CONN_CACHE[ CACHE_KEY ] );
-            this._CONN_CACHE[ CACHE_KEY ] = conn = {
+            if (!noCache) {
+                tryCloseConnection( this._CONN_CACHE[ CACHE_KEY ] );
+            }
+
+            conn = {
                 cache: {
                     stats: {},
                 },
@@ -375,6 +378,10 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
                 noop: noop,
             };
+
+            if (!noCache) {
+                this._CONN_CACHE[ CACHE_KEY ] = conn;
+            }
 
             if (!isNaN(keepAlive)) {
                 conn.client.keepAlive(
