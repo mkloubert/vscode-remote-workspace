@@ -307,6 +307,7 @@ URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?opti
 | ---- | --------- | --------- |
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=webdav_server1` |
 | `base` | The base path, that is used as prefix for all requests. | `base=nextcloud/remote.php/webdav/` |
+| `encoding` | The [encoding](https://nodejs.org/api/buffer.html#buffer_buf_tostring_encoding_start_end) for reading and writing text files to use. Default: `binary` | `encoding=utf8` |
 | `ssl` | Use secure HTTP or not. Can be `0` or `1`. Default: `0` | `ssl=1` |
 
 ## Commands [[&uarr;](#table-of-contents)]

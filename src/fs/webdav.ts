@@ -16,7 +16,6 @@
  */
 
 import * as _ from 'lodash';
-import * as FSExtra from 'fs-extra';
 import * as Moment from 'moment';
 import * as MomentTZ from 'moment-timezone';  // REQUIRED EXTENSION FOR moment MODULE!!!
 import * as Path from 'path';
@@ -28,6 +27,7 @@ const WebDAV = require('webdav-client');
 
 interface WebDAVConnection {
     client: any;
+    encoding: string;
 }
 
 interface WebDAVConnectionOptions {
@@ -47,6 +47,8 @@ interface WebDAVReaddirComplexResult {
     size: number;
     type: 'd' | 'f';
 }
+
+const DEFAULT_TEXT_FILE_ENCODING = 'binary';
 
 /**
  * WebDAV file system.
@@ -247,6 +249,25 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         });
     }
 
+    private getEncoding(data: Buffer, textEnc: string) {
+        let enc: string;
+
+        try {
+            if (!vscode_helpers.isBinaryContentSync(data)) {
+                enc = textEnc;
+            }
+        } catch (e) {
+            this.logger
+                .warn(e, 'fs.WebDAVFileSystem.getEncoding()');
+        }
+
+        if (vscode_helpers.isEmptyString(enc)) {
+            enc = DEFAULT_TEXT_FILE_ENCODING;
+        }
+
+        return enc;
+    }
+
     private list(uri: vscode.Uri) {
         return this.forConnection(uri, async (conn) => {
             const WF = vscode_helpers.buildWorkflow();
@@ -331,6 +352,13 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         );
         let ssl = vscrw.isTrue(PARAMS['ssl']);
 
+        let enc = vscode_helpers.normalizeString(
+            PARAMS['encoding']
+        );
+        if ('' === enc) {
+            enc = DEFAULT_TEXT_FILE_ENCODING;
+        }
+
         const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri,
                                                                     ssl ? 443 : 80);
 
@@ -348,6 +376,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
 
         return {
             client: new WebDAV.Connection(OPTS),
+            encoding: enc,
         };
     }
 
@@ -389,8 +418,11 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                                 COMPLETED(err);
                             } else {
                                 try {
+                                    const ENC = this.getEncoding(new Buffer(body, DEFAULT_TEXT_FILE_ENCODING),
+                                                                 conn.encoding);
+
                                     COMPLETED(null,
-                                              new Buffer(body, 'binary'));
+                                              new Buffer(vscode_helpers.toStringSafe(body), ENC));
                                 } catch (e) {
                                     COMPLETED(e);
                                 }
@@ -511,9 +543,12 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                         uri
                     );
 
+                    const DATA_TO_WRITE = vscrw.asBuffer(content);
+                    const ENC = this.getEncoding(DATA_TO_WRITE, conn.encoding);
+
                     conn.client.put(
                         toWebDAVPath(uri.path),
-                        vscrw.asBuffer(content).toString('binary'),
+                        DATA_TO_WRITE.toString( ENC ),
                         (err: any) => {
                             COMPLETED(err);
                         }

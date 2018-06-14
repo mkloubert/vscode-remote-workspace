@@ -174,6 +174,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const WF = vscode_helpers.buildWorkflow();
 
+    // package file
+    WF.next(async () => {
+        try {
+            const CUR_DIR = __dirname;
+            const FILE_PATH = Path.join(CUR_DIR, '../package.json');
+
+            packageFile = JSON.parse(
+                await FSExtra.readFile(FILE_PATH, 'utf8')
+            );
+        } catch { }
+    });
+
     // extension's directory in user's home
     WF.next(async () => {
         try {
