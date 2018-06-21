@@ -15,6 +15,7 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
 
 1. [Install](#install-)
 2. [How to use](#how-to-use-)
+   * [About parameters](#about-parameters-)
    * [Azure](#azure-)
      * [Parameters](#parameters-)
      * [Remarks](#remarks-)
@@ -59,24 +60,37 @@ Create (or update) a `.code-workspace` file and open it by using `File >> Open W
 ```json
 {
     "folders": [{
-        "uri": "sftp://my-user:my-password@example.com",
+        "uri": "sftp://my-user:my-password@example.com?debug=1",
         "name": "My SFTP folder"
-    }],
-    "settings": {}
+    }]
+}
+```
+
+### About parameters [[&uarr;](#how-to-use-)]
+
+A parameter is a key-value-pair, which has to be setup in the URI and NOT in the `settings` section of a `.code-workspace` file.
+
+If you want to set the `debug` parameter to `1` for a [SFTP connection](#sftp-), e.g.:
+
+```json
+{
+    "folders": [{
+        "uri": "sftp://myUser:myPass@example.com?debug=1",
+        "name": "My SFTP folder"
+    }]
 }
 ```
 
 ### Azure [[&uarr;](#how-to-use-)]
 
-URL Format: `azure://[account:key@][container][/path/to/file/or/folder][?option1=value1&option2=value2]`
+URL Format: `azure://[account:key@][container][/path/to/file/or/folder][?param1=value1&param2=value2]`
 
 ```json
 {
     "folders": [{
         "uri": "azure://my-account:my-storage-key@my-container/",
         "name": "My Azure folder"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
@@ -87,8 +101,7 @@ For accessing local storage emulator, use something like that:
     "folders": [{
         "uri": "azure://mycontainer/",
         "name": "My local Azure folder"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
@@ -106,15 +119,14 @@ Before you delete that file, you should store another file there, otherwise the 
 
 ### Dropbox [[&uarr;](#how-to-use-)]
 
-URL Format: `dropbox://token[/path/to/file/or/folder]`
+URL Format: `dropbox://token[/path/to/file/or/folder][?param1=value1&param2=value2]`
 
 ```json
 {
     "folders": [{
         "uri": "dropbox://<API-TOKEN>/",
         "name": "My Dropbox folder"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
@@ -126,15 +138,14 @@ URL Format: `dropbox://token[/path/to/file/or/folder]`
 
 ### FTP [[&uarr;](#how-to-use-)]
 
-URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
+URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder][?param1=value1&param2=value2]`
 
 ```json
 {
     "folders": [{
         "uri": "ftp://my-user:my-password@ftp.example.com/",
         "name": "My FTP folder"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
@@ -149,15 +160,14 @@ URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder]`
 
 ### FTPs [[&uarr;](#how-to-use-)]
 
-URL Format: `ftps://[user:password@]host[:port][/path/to/a/folder]`
+URL Format: `ftps://[user:password@]host[:port][/path/to/a/folder][?param1=value1&param2=value2]`
 
 ```json
 {
     "folders": [{
         "uri": "ftps://my-user:my-password@ftps.example.com/",
         "name": "My (secure) FTP folder"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
@@ -174,15 +184,14 @@ URL Format: `ftps://[user:password@]host[:port][/path/to/a/folder]`
 
 ### S3 Buckets [[&uarr;](#how-to-use-)]
 
-URL Format: `s3://[credential_type@]bucket[/path/to/file/or/folder][?option1=value1&option2=value2]`
+URL Format: `s3://[credential_type@]bucket[/path/to/file/or/folder][?param1=value1&param2=value2]`
 
 ```json
 {
     "folders": [{
         "uri": "s3://my-bucket/?acl=public-read",
         "name": "My S3 Bucket"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
@@ -207,15 +216,14 @@ Default value: `shared`
 
 ### SFTP [[&uarr;](#how-to-use-)]
 
-URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?option1=value1&option2=value2]`
+URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?param1=value1&param2=value2]`
 
 ```json
 {
     "folders": [{
         "uri": "sftp://my-user:my-password@sftp.example.com/",
         "name": "My SFTP folder"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
@@ -265,15 +273,14 @@ Glob patterns are handled by [minimatch](https://github.com/isaacs/minimatch).
 
 ### Slack [[&uarr;](#how-to-use-)]
 
-URL Format: `slack://token@channel[/]`
+URL Format: `slack://token@channel[/][?param1=value1&param2=value2]`
 
 ```json
 {
     "folders": [{
         "uri": "slack://<API-TOKEN>@<CHANNEL-ID>",
         "name": "My Slack channel"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
@@ -289,15 +296,14 @@ The protocol only supports read and list operations.
 
 ### WebDAV [[&uarr;](#how-to-use-)]
 
-URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?option1=value1&option2=value2]`
+URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?param1=value1&param2=value2]`
 
 ```json
 {
     "folders": [{
         "uri": "webdav://myUser:myPassword@webdav.example.com/?ssl=1",
         "name": "My WebDAV server"
-    }],
-    "settings": {}
+    }]
 }
 ```
 
