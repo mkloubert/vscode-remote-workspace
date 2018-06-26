@@ -342,7 +342,7 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
         const CACHE_KEY = vscrw.getConnectionCacheKey( uri );
 
-        const PARAMS = vscrw.uriParamsToObject(uri);
+        const PARAMS = vscrw.getUriParams(uri);
 
         let conn: FTPConnection | false = false;
         if (!noCache) {

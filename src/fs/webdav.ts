@@ -26,6 +26,7 @@ import * as vscrw_fs from '../fs';
 const WebDAV = require('webdav-client');
 
 interface WebDAVConnection {
+    binaryEncoding: string;
     client: any;
     encoding: string;
 }
@@ -48,6 +49,7 @@ interface WebDAVReaddirComplexResult {
     type: 'd' | 'f';
 }
 
+const DEFAULT_BINARY_FILE_ENCODING = 'binary';
 const DEFAULT_TEXT_FILE_ENCODING = 'binary';
 
 /**
@@ -249,13 +251,14 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         });
     }
 
-    private getEncoding(data: Buffer, textEnc: string) {
+    private getEncoding(
+        data: Buffer,
+        textEnc: string, binEnc: string,
+    ) {
         let enc: string;
 
         try {
-            if (!vscode_helpers.isBinaryContentSync(data)) {
-                enc = textEnc;
-            }
+            enc = vscode_helpers.isBinaryContentSync(data) ? binEnc : textEnc;
         } catch (e) {
             this.logger
                 .warn(e, 'fs.WebDAVFileSystem.getEncoding()');
@@ -345,7 +348,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         //
         // webdav://[user:password@]host[:port][/path/to/file/or/folder]
 
-        const PARAMS = vscrw.uriParamsToObject(uri);
+        const PARAMS = vscrw.getUriParams(uri);
 
         let base = vscrw.normalizePath(
             vscode_helpers.toStringSafe(PARAMS['base'])
@@ -357,6 +360,13 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         );
         if ('' === enc) {
             enc = DEFAULT_TEXT_FILE_ENCODING;
+        }
+
+        let binEnc = vscode_helpers.normalizeString(
+            PARAMS['binencoding']
+        );
+        if ('' === binEnc) {
+            binEnc = DEFAULT_BINARY_FILE_ENCODING;
         }
 
         const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri,
@@ -376,6 +386,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
 
         return {
             client: new WebDAV.Connection(OPTS),
+            binaryEncoding: binEnc,
             encoding: enc,
         };
     }
@@ -419,7 +430,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                             } else {
                                 try {
                                     const ENC = this.getEncoding(new Buffer(body, DEFAULT_TEXT_FILE_ENCODING),
-                                                                 conn.encoding);
+                                                                 conn.encoding, conn.binaryEncoding);
 
                                     COMPLETED(null,
                                               new Buffer(vscode_helpers.toStringSafe(body), ENC));
@@ -544,7 +555,8 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                     );
 
                     const DATA_TO_WRITE = vscrw.asBuffer(content);
-                    const ENC = this.getEncoding(DATA_TO_WRITE, conn.encoding);
+                    const ENC = this.getEncoding(DATA_TO_WRITE,
+                                                 conn.encoding, conn.binaryEncoding);
 
                     conn.client.put(
                         toWebDAVPath(uri.path),

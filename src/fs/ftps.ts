@@ -207,7 +207,7 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
 
         const CACHE_KEY = vscrw.getConnectionCacheKey( uri );
 
-        const PARAMS = vscrw.uriParamsToObject(uri);
+        const PARAMS = vscrw.getUriParams(uri);
 
         return new Promise<FTPsConnection>(async (resolve, reject) => {
             const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);

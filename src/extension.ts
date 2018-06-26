@@ -161,6 +161,7 @@ let isDeactivating = false;
 const KEY_LAST_GIT_ARGS = 'vscrwLastGitArgs';
 const KEY_LAST_KNOWN_VERSION = 'vscrwLastKnownVersion';
 const KEY_LAST_REMOTE_COMMANDS = 'vscrwLastRemoteCommands';
+const KEY_PARAMS = 'params';
 let logger: vscode_helpers.Logger;
 let nextReceiveRemoteURICommandId = Number.MIN_SAFE_INTEGER;
 let outputChannel: vscode.OutputChannel;
@@ -1045,7 +1046,7 @@ export async function extractHostAndCredentials(uri: vscode.Uri, defaultPort?: n
         user: undefined,
     };
 
-    const PARAMS = uriParamsToObject(uri);
+    const PARAMS = getUriParams(uri);
 
     let userAndPwd: string | false = false;
     {
@@ -1154,7 +1155,7 @@ export function getConnectionCacheKey(uri: vscode.Uri): string {
 
     return `${ vscode_helpers.normalizeString(uri.scheme) }\n` +
            `${ vscode_helpers.toStringSafe(uri.authority) }\n` +
-           `${ JSON.stringify( uriParamsToObject( uri ) ) }\n` +
+           `${ JSON.stringify( getUriParams( uri ) ) }\n` +
            `${ vscode_helpers.normalizeString(uri.fragment) }`;
 }
 
@@ -1186,6 +1187,62 @@ function getStringRepo(key: string, defaultValue?: StringRepository) {
     }
 
     return repo;
+}
+
+/**
+ * Returns the parameters of an URI.
+ *
+ * @param {URL.Url|vscode.Uri} uri The URI.
+ *
+ * @return {KeyValuePairs<string>} The extracted / loaded parameters.
+ */
+export function getUriParams(uri: URL.Url | vscode.Uri): KeyValuePairs<string> {
+    if (_.isNil(uri)) {
+        return <any>uri;
+    }
+
+    const URI_PARAMS = uriParamsToObject(uri);
+
+    const PARAMS: KeyValuePairs<string> = {};
+    const APPLY_PARAMS = (paramsAndValues: any) => {
+        if (_.isNil(paramsAndValues)) {
+            return;
+        }
+
+        for (const P in paramsAndValues) {
+            const PARAM_KEY = vscode_helpers.normalizeString(P);
+
+            if (PARAM_KEY !== KEY_PARAMS) {
+                PARAMS[ PARAM_KEY ] = vscode_helpers.toStringSafe( paramsAndValues[P] );
+            }
+        }
+    };
+
+    // first the explicit ones
+    APPLY_PARAMS( URI_PARAMS );
+
+    // now from external JSON file?
+    let paramsFile = vscode_helpers.toStringSafe( URI_PARAMS[KEY_PARAMS] );
+    if (!vscode_helpers.isEmptyString(paramsFile)) {
+        if (!Path.isAbsolute(paramsFile)) {
+            paramsFile = Path.join(
+                OS.homedir(), paramsFile
+            );
+        }
+
+        paramsFile = Path.resolve(paramsFile);
+
+        APPLY_PARAMS(
+            JSON.parse(
+                FSExtra.readFileSync(paramsFile, 'utf8')
+            )
+        );
+    }
+
+    // we do not need the 'params' parameter anymore
+    delete PARAMS[ KEY_PARAMS ];
+
+    return PARAMS;
 }
 
 function isRemoteExecutionSupported(uri: vscode.Uri) {
@@ -1320,14 +1377,7 @@ function toUriKey(uri: vscode.Uri) {
     }
 }
 
-/**
- * Extracts the query parameters of an URI to an object.
- *
- * @param {URL.Url|vscode.Uri} uri The URI.
- *
- * @return {deploy_contracts.KeyValuePairs<string>} The parameters of the URI as object.
- */
-export function uriParamsToObject(uri: URL.Url | vscode.Uri): KeyValuePairs<string> {
+function uriParamsToObject(uri: URL.Url | vscode.Uri): KeyValuePairs<string> {
     if (_.isNil(uri)) {
         return <any>uri;
     }

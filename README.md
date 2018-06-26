@@ -16,6 +16,7 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
 1. [Install](#install-)
 2. [How to use](#how-to-use-)
    * [About parameters](#about-parameters-)
+     * [Import parameters](#import-parameters-)
    * [Azure](#azure-)
      * [Parameters](#parameters-)
      * [Remarks](#remarks-)
@@ -81,6 +82,37 @@ If you want to set the `debug` parameter to `1` for a [SFTP connection](#sftp-),
 }
 ```
 
+#### Import parameters [[&uarr;](#about-parameters-)]
+
+Any URI / protocol supports a general parameter, called `params`, which can load / import parameters from an external file, that contains a JSON object.
+
+For example, you can create a file, lets say `sftp_server1_uri_params.json`, inside your home directory with the following content:
+
+```json
+{
+    "debug": 1,
+    "mode": 664,
+    "key": "id_rsa",
+    "passphrase": "My Key Passphrase",
+    "noPhraseFile": 1
+}
+```
+
+In the URI, inside your `.code-workspace` file, you have to define the `params` parameter and set it to the path / name of that JSON file:
+
+```json
+{
+    "folders": [{
+        "uri": "sftp://myUser:myPass@example.com?params=sftp_server1_uri_params.json",
+        "name": "My SFTP folder"
+    }]
+}
+```
+
+Relative paths will be mapped to the user's home directory.
+
+Explicit URI parameters, which are also defined in such an external file, will be overwritten by the values of the file.
+
 ### Azure [[&uarr;](#how-to-use-)]
 
 URL Format: `azure://[account:key@][container][/path/to/file/or/folder][?param1=value1&param2=value2]`
@@ -111,6 +143,7 @@ For accessing local storage emulator, use something like that:
 | ---- | --------- | --------- |
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=my_azure_account` |
 | `host` | The custom host address. | `host=azure.example.com` | 
+| `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=azure_uri_params.json` | 
 
 #### Remarks [[&uarr;](#azure-)]
 
@@ -135,6 +168,7 @@ URL Format: `dropbox://token[/path/to/file/or/folder][?param1=value1&param2=valu
 | Name | Description | Example | 
 | ---- | --------- | --------- |
 | `auth` | A path to a file, that contains the part left to `@` (the API token). Relative paths will be mapped to the user's home directory. | `auth=dropbox_token` |
+| `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=dropbox_uri_params.json` | 
 
 ### FTP [[&uarr;](#how-to-use-)]
 
@@ -157,6 +191,7 @@ URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder][?param1=value1
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `keepAlive` | Defines a time interval, in seconds, that sends a `NOOP` command automatically to keep the connection alive. | `keepAlive=15` |
 | `noop` | The custom [FTP command](https://en.wikipedia.org/wiki/List_of_FTP_commands) to execute to check if connection is still alive. Default: `NOOP` | `noop=SYST` |
+| `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=ftp_uri_params.json` | 
 
 ### FTPs [[&uarr;](#how-to-use-)]
 
@@ -179,6 +214,7 @@ URL Format: `ftps://[user:password@]host[:port][/path/to/a/folder][?param1=value
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `keepAlive` | Defines a time interval, in seconds, that sends a `NOOP` command automatically to keep the connection alive. Default `10` | `keepAlive=45` |
 | `legacy` | Use [ftp](https://www.npmjs.com/package/ftp) module instead of forked [@icetee/ftp](https://www.npmjs.com/package/@icetee/ftp), if you have problems. Default: `0` | `legacy=1` |
+| `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=ftps_uri_params.json` | 
 | `rejectUnauthorized` | Reject unauthorized server certificates or not. Default: `0` | `rejectUnauthorized=1` |
 | `secure` | Use secure (`1`) or plain (`0`) FTP connection. Default: `1` | `secure=0` |
 
@@ -211,6 +247,7 @@ Default value: `shared`
 | ---- | --------- | --------- | 
 | `acl` | The [ACL](https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html) for new or updated files to use. Default: `private` | `acl=public-read` | 
 | `file` | If credential type is set to `file`, this defines the path to the `.json` file, which should be used. Relative paths will be mapped to the `.aws` sub folder inside the user's home directory. | `file=aws.json` |
+| `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=s3_uri_params.json` | 
 | `profile` | If credential type is set to `shared`, this defines the name of the section inside the `.ini` file, which should be used. Default: `default` | `profile=mkloubert` |
 | `varPrefix` | If credential type is set to `environment`, this defines the custom prefix for the environment variables (without `_` suffix!), which contain the credentials. Default: `AWS` | `varPrefix=MY_AWS_PREFIX` |
 
@@ -245,6 +282,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?param1=value
 | `mode` | Defines the [chmod](https://en.wikipedia.org/wiki/Chmod) access permission value for the files / folders on server. This can be an octal number or the path to a JSON file, that contains a "mapper" object. s. [mode](#mode-) for more information. | `mode=644` |
 | `noop` | By default, a list operation is done for the root directory of the server, to check if a connection is alive. You can change this by executing a fast command on the server, which does not produce much response, e.g. | `noop=uname` |
 | `noPhraseFile` | `1` indicates, that `phrase` parameter will NEVER handled as file path. Default: `0` | `noPhraseFile=1` |
+| `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=sftp_uri_params.json` | 
 | `phrase` | The passphrase (or path to a file with it) for the key file, if needed. To prevent conflicts, you should additionally set `noPhraseFile` to `1`, if that value is explicitly a passphrase value and NO path to an external file. Relative file paths will be mapped to the user's home directory. | `phrase=myPassphrase` |
 | `timeout` | How long (in milliseconds) to wait for the SSH handshake to complete. Default: `20000` | `timeout=60000` |
 | `tryKeyboard` | Try keyboard-interactive user authentication if primary user authentication method fails. Can be `0` or `1`. Default: `0` | `tryKeyboard=1` |
@@ -289,6 +327,7 @@ URL Format: `slack://token@channel[/][?param1=value1&param2=value2]`
 | Name | Description | Example | 
 | ---- | --------- | --------- | 
 | `auth` | A path to a file, that contains the part left to `@` (the API token). Relative paths will be mapped to the user's home directory. | `auth=slack_token` |
+| `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=slack_uri_params.json` | 
 
 #### Remarks [[&uarr;](#slack-)]
 
@@ -313,7 +352,9 @@ URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?para
 | ---- | --------- | --------- |
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=webdav_server1` |
 | `base` | The base path, that is used as prefix for all requests. | `base=nextcloud/remote.php/webdav/` |
+| `binEncoding` | The [encoding](https://nodejs.org/api/buffer.html#buffer_buf_tostring_encoding_start_end) for reading and writing binary files to use. Default: `binary` | `binEncoding=utf8` |
 | `encoding` | The [encoding](https://nodejs.org/api/buffer.html#buffer_buf_tostring_encoding_start_end) for reading and writing text files to use. Default: `binary` | `encoding=utf8` |
+| `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=webdav_uri_params.json` |
 | `ssl` | Use secure HTTP or not. Can be `0` or `1`. Default: `0` | `ssl=1` |
 
 ## Commands [[&uarr;](#table-of-contents)]

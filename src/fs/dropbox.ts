@@ -173,7 +173,7 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
         //
         // dropbox://token[/path/to/file/or/folder]
 
-        const PARAMS = vscrw.uriParamsToObject(uri);
+        const PARAMS = vscrw.getUriParams(uri);
 
         let accessToken: string | false = false;
         {

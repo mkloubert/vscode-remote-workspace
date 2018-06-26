@@ -228,7 +228,7 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
         //
         // azure://[account:key@][container][/path/to/file/or/folder]
 
-        const PARAMS = vscrw.uriParamsToObject(uri);
+        const PARAMS = vscrw.getUriParams(uri);
 
         let account: string;
         let client: AzureStorage.BlobService;

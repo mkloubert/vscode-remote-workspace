@@ -162,12 +162,11 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
         //
         // slack://token@channel[/]
 
-        const PARAMS = vscrw.uriParamsToObject(uri);
+        const PARAMS = vscrw.getUriParams(uri);
 
         let channel: string;
 
         let token: string | false = false;
-
         {
             // external auth file?
             let authFile = vscode_helpers.toStringSafe( PARAMS['auth'] );

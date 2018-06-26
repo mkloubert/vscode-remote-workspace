@@ -149,7 +149,7 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
     }
 
     private async getACL(uri: vscode.Uri) {
-        const PARAMS = vscrw.uriParamsToObject(uri);
+        const PARAMS = vscrw.getUriParams(uri);
 
         let acl = vscode_helpers.normalizeString( PARAMS['acl'] );
         if ('' === acl) {
@@ -262,7 +262,7 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
         //
         // s3://[credential_type@]bucket[/path/to/file/or/folder]
 
-        const PARAMS = vscrw.uriParamsToObject(uri);
+        const PARAMS = vscrw.getUriParams(uri);
 
         const AWS_DIR = Path.resolve(
             Path.join(
