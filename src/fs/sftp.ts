@@ -19,7 +19,7 @@ import * as _ from 'lodash';
 import * as FSExtra from 'fs-extra';
 import * as OS from 'os';
 import * as Path from 'path';
-import * as SFTP from 'ssh2-sftp-client';
+const SFTP = require('ssh2-sftp-client');
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw from '../extension';
@@ -30,7 +30,7 @@ type FileModeMapper = { [mode: string]: string | string[] };
 interface SFTPConnection {
     cache: SFTPConnectionCache;
     changeMode: (ft: vscode.FileType, u: vscode.Uri, m?: number) => PromiseLike<boolean>;
-    client: SFTP;
+    client: any;
     followSymLinks: boolean;
     keepMode: boolean;
     noop: string;
@@ -47,7 +47,7 @@ interface SFTPFileRights {
 }
 
 interface SFTPFileStat extends vscode.FileStat {
-    __vscrw_fileinfo: SFTP.FileInfo;
+    __vscrw_fileinfo: any;
 }
 
 type STPModeValueOrPath = string | number | false;
@@ -804,7 +804,7 @@ function chmodRightsToNumber(rights: SFTPFileRights): number {
     );
 }
 
-function execServerCommand(conn: SFTP, cmd: string) {
+function execServerCommand(conn: any, cmd: string) {
     cmd = vscode_helpers.toStringSafe(cmd);
 
     return new Promise<Buffer>((resolve, reject) => {
@@ -891,7 +891,7 @@ function execServerCommand(conn: SFTP, cmd: string) {
     });
 }
 
-async function toFileStat(fi: SFTP.FileInfo, uri: vscode.Uri, conn: SFTPConnection): Promise<[ string, SFTPFileStat ]> {
+async function toFileStat(fi: any, uri: vscode.Uri, conn: SFTPConnection): Promise<[ string, SFTPFileStat ]> {
     if (fi) {
         const STAT: SFTPFileStat = {
             '__vscrw_fileinfo': fi,

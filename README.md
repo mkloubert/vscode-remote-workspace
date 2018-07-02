@@ -245,7 +245,10 @@ Default value: `shared`
 
 | Name | Description | Example | 
 | ---- | --------- | --------- | 
+| `api` | A string in `YYYY-MM-DD` format that represents the latest possible API version that can be used in this service. Specify `latest` to use the latest possible version. | `api=latest` | 
 | `acl` | The [ACL](https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html) for new or updated files to use. Default: `private` | `acl=public-read` | 
+| `debug` | Set to `1`, to debug a connection, by writing all messages to [log files](#logs-). Default: `0` | `debug=1` |
+| `endpoint` | The endpoint URI to send requests to. The default endpoint is built from the configured region. The endpoint should be a string like `https://{service}.{region}.amazonaws.com`. | `endpoint=https%3A%2F%2Ffoo.bar.amazonaws.com` | 
 | `file` | If credential type is set to `file`, this defines the path to the `.json` file, which should be used. Relative paths will be mapped to the `.aws` sub folder inside the user's home directory. | `file=aws.json` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=s3_uri_params.json` | 
 | `profile` | If credential type is set to `shared`, this defines the name of the section inside the `.ini` file, which should be used. Default: `default` | `profile=mkloubert` |
@@ -272,7 +275,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?param1=value
 | `agentForward` | Set to `1`, to use OpenSSH agent forwarding (`auth-agent@openssh.com`) for the life of the connection. Default: `0` | `agentForward=1` |
 | `allowedHashes` | Comma-separated list of hashes to verify. | `allowedHashes=md5,sha-1` |
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftp_server1` |
-| `debug` | Set to `1`, to debug a connection. The logs will be written to `.vscode-remote-workspace/.logs` sub folder inside the user's home directory. Default: `0` | `debug=1` |
+| `debug` | Set to `1`, to debug a connection, by writing all messages to [log files](#logs-). Default: `0` | `debug=1` |
 | `dirMode` | Defines a special [chmod](https://en.wikipedia.org/wiki/Chmod) access permission value for the folders on server. This can be an octal number or the path to a JSON file, that contains a "mapper" object. If not defined, the value of `mode` parameter is used. s. [mode](#mode-) for more information. | `dirMode=755` |
 | `follow` | Follow symbolic links or not. Default: `1` | `follow=0` |
 | `hash` | The algorithm to use to verify the fingerprint of a host. Possible values are `md5` and `sha-1` Default: `md5` | `hash=sha-1` |

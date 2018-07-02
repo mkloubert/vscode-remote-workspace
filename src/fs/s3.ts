@@ -331,9 +331,38 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                 break;
         }
 
+        let endpoint = vscode_helpers.toStringSafe( PARAMS['endpoint'] );
+        if (vscode_helpers.isEmptyString(endpoint)) {
+            endpoint = undefined;
+        }
+
+        let api = vscode_helpers.toStringSafe( PARAMS['api'] ).trim();
+        if ('' === api) {
+            api = undefined;
+        }
+
+        let logger: {
+            log?: (...messages: any[]) => void;
+        };
+        if (vscrw.isTrue(PARAMS['debug'])) {
+            logger = {
+                log: (messages) => {
+                    try {
+                        for (const M of messages) {
+                            this.logger
+                                .info(M, 's3');
+                        }
+                    } catch { }
+                }
+            };
+        }
+
         const S3: S3Connection = {
             client: new AWS.S3({
+                apiVersion: api,
+                logger: logger,
                 credentials: new credentialClass(credentialConfig),
+                endpoint: endpoint,
                 params: {
                     Bucket: this.getBucket( uri ),
                     ACL: this.getDefaultAcl(),
