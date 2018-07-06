@@ -264,6 +264,8 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                     } else {
                         await DELE( uri.path );
                     }
+
+                    COMPLETED(null);
                 } catch (e) {
                     COMPLETED(e);
                 }
