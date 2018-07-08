@@ -23,7 +23,7 @@ import * as FSExtra from 'fs-extra';
 import * as Marked from 'marked';
 import * as Moment from 'moment';
 import * as MomentTZ from 'moment-timezone';  // REQUIRED EXTENSION FOR moment MODULE!!!
-import * as Net from 'net';  // REQUIRED EXTENSION FOR moment MODULE!!!
+import * as Net from 'net';
 import * as OS from 'os';
 import * as Path from 'path';
 import * as SimpleSocket from 'node-simple-socket';

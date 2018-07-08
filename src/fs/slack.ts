@@ -277,7 +277,10 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
         context.subscriptions.push(
             vscode.workspace.registerFileSystemProvider(SlackFileSystem.scheme,
                                                         new SlackFileSystem(),
-                                                        { isCaseSensitive: false })
+                                                        {
+                                                            isCaseSensitive: false,
+                                                            isReadonly: true,
+                                                        })
         );
     }
 
