@@ -133,6 +133,8 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 await conn.client.delete(
                     vscrw.normalizePath(uri.path)
                 );
+
+                this.emitFileDeleted( uri );
             }
         });
     }
@@ -572,6 +574,10 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             );
 
             await conn.changeMode(OLD_STAT.type, newUri);
+
+            if (vscode.FileType.File === OLD_STAT.type) {
+                this.emitFileRenamed(oldUri, newUri);
+            }
         });
     }
 
@@ -703,18 +709,6 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        // TODO: implement
-        return {
-            dispose: () => {
-
-            }
-        };
-    }
-
-    /**
-     * @inheritdoc
-     */
     public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
             const STAT = await this.tryGetStat(uri);
@@ -735,6 +729,12 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             );
 
             await conn.changeMode(vscode.FileType.File, uri, oldMod);
+
+            if (false === STAT) {
+                this.emitFileCreated( uri );
+            }
+
+            this.emitFileWrite(uri);
         });
     }
 }

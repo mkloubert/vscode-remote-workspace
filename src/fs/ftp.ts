@@ -263,6 +263,8 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                         await REMOVE_FOLDER( uri.path );
                     } else {
                         await DELE( uri.path );
+
+                        this.emitFileDeleted( uri );
                     }
 
                     COMPLETED(null);
@@ -498,10 +500,28 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
     public async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }) {
         await this.forConnection(oldUri, (conn) => {
             return new Promise<void>(async (resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+                let oldStat: vscode.FileStat;
+
+                let completedInvoked = false;
+                const COMPLETED = (err) => {
+                    if (completedInvoked) {
+                        return;
+                    }
+                    completedInvoked = true;
+
+                    if (err) {
+                        reject(err);
+                    } else {
+                        if (vscode.FileType.File === oldStat.type) {
+                            this.emitFileRenamed(oldUri, newUri);
+                        }
+
+                        resolve();
+                    }
+                };
 
                 try {
-                    const OLD_STAT = await this.statInner(oldUri, conn);
+                    oldStat = await this.statInner(oldUri, conn);
 
                     const NEW_STAT = await this.tryGetStat(newUri, conn);
                     if (false !== NEW_STAT) {
@@ -649,22 +669,30 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        // TODO: implement
-        return {
-            dispose: () => {
-
-            }
-        };
-    }
-
-    /**
-     * @inheritdoc
-     */
     public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
             return new Promise<void>(async (resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+                const STAT = await this.tryGetStat( uri );
+
+                let completedInvoked = false;
+                const COMPLETED = (err) => {
+                    if (completedInvoked) {
+                        return;
+                    }
+                    completedInvoked = true;
+
+                    if (err) {
+                        reject(err);
+                    } else {
+                        if (false === STAT) {
+                            this.emitFileCreated( uri );
+                        }
+
+                        this.emitFileWrite( uri );
+
+                        resolve();
+                    }
+                };
 
                 try {
                     this.throwIfWriteFileIsNotAllowed(

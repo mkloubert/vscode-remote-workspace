@@ -31,6 +31,8 @@ interface DropboxConnection {
 interface DropboxFileEntry {
     '.tag': string;
     name: string;
+    path_display?: string;
+    path_lower?: string;
 }
 
 interface DropboxFileStat extends vscode.FileStat {
@@ -91,9 +93,12 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
         await this.forConnection(uri, async (conn) => {
             const STAT = await this.statInner(uri);
 
+            let afterDeleted: (() => any) | false = false;
+
             if (vscode.FileType.Directory === STAT.type) {
                 if (!options.recursive) {
                     const LIST = await this.list(uri);
+
                     const HAS_SUB_DIRS = LIST.filter(i => {
                         return 'folder' === vscode_helpers.normalizeString(i['.tag']);
                     }).length > 0;
@@ -102,11 +107,21 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
                         throw vscode.FileSystemError.NoPermissions( uri );
                     }
                 }
+            } else if (vscode.FileType.File === STAT.type) {
+                afterDeleted = () => {
+                    this.emitFileDeleted( uri );
+                };
             }
 
             await conn.client.filesDeleteV2({
                 path: toDropboxPath(uri.path)
             });
+
+            if (false !== afterDeleted) {
+                await Promise.resolve(
+                    afterDeleted()
+                );
+            }
         });
     }
 
@@ -269,8 +284,10 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
      */
     public async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }) {
         await this.forConnection(oldUri, async (conn) => {
-            const STAT = await this.tryGetStat(newUri);
-            if (false !== STAT) {
+            const OLD_STAT = await this.statInner(oldUri);
+
+            const NEW_STAT = await this.tryGetStat(newUri);
+            if (false !== NEW_STAT) {
                 if (options.overwrite) {
                     await conn.client.filesDeleteV2({
                         path: toDropboxPath(newUri.path),
@@ -280,10 +297,24 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
                 }
             }
 
+            let afterRenamed: (() => any) | false = false;
+
+            if (vscode.FileType.File === OLD_STAT.type) {
+                afterRenamed = () => {
+                    this.emitFileRenamed(oldUri, newUri);
+                };
+            }
+
             await conn.client.filesMoveV2({
                 from_path: toDropboxPath(oldUri.path),
                 to_path: toDropboxPath(newUri.path),
             });
+
+            if (false !== afterRenamed) {
+                await Promise.resolve(
+                    afterRenamed()
+                );
+            }
         });
     }
 
@@ -374,24 +405,14 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        // TODO: implement
-        return {
-            dispose: () => {
-
-            }
-        };
-    }
-
-    /**
-     * @inheritdoc
-     */
     public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
             this.throwIfWriteFileIsNotAllowed(
                 await this.tryGetStat(uri), options,
                 uri
             );
+
+            const STAT = await this.tryGetStat(uri);
 
             await conn.client.filesUpload({
                 autorename: false,
@@ -402,6 +423,12 @@ export class DropboxFileSystem extends vscrw_fs.FileSystemBase {
                 mute: false,
                 path: toDropboxPath(uri.path),
             });
+
+            if (false === STAT) {
+                this.emitFileCreated( uri );
+            }
+
+            this.emitFileWrite( uri );
         });
     }
 }

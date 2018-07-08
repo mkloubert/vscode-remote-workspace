@@ -373,29 +373,6 @@ export class SlackFileSystem extends vscrw_fs.FileSystemBase {
         });
     }
 
-    private async tryGetStat(uri: vscode.Uri): Promise<SlackFileStat | false> {
-        let stat: SlackFileStat | false;
-        try {
-            stat = await this.statInner( uri );
-        } catch {
-            stat = false;
-        }
-
-        return stat;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        // TODO: implement
-        return {
-            dispose: () => {
-
-            }
-        };
-    }
-
     /**
      * @inheritdoc
      */

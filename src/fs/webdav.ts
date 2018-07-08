@@ -107,10 +107,30 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
      */
     public async delete(uri: vscode.Uri, options: { recursive: boolean }) {
         return this.forConnection(uri, (conn) => {
-            return new Promise<void>((resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+            return new Promise<void>(async (resolve, reject) => {
+                let stat: WebDAVFileStat;
+
+                let completedInvoked = false;
+                const COMPLETED = (err: any) => {
+                    if (completedInvoked) {
+                        return;
+                    }
+                    completedInvoked = true;
+
+                    if (err) {
+                        reject(err);
+                    } else {
+                        if (vscode.FileType.File === stat.type) {
+                            this.emitFileDeleted(uri);
+                        }
+
+                        resolve();
+                    }
+                };
 
                 try {
+                    stat = await this.statInner(uri);
+
                     conn.client.delete(
                         toWebDAVPath(uri.path),
                         (err) => {
@@ -465,10 +485,30 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
      */
     public rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }) {
         return this.forConnection(oldUri, (conn) => {
-            return new Promise<void>((resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+            return new Promise<void>(async (resolve, reject) => {
+                let stat: WebDAVFileStat;
+
+                let completedInvoked = false;
+                const COMPLETED = (err: any) => {
+                    if (completedInvoked) {
+                        return;
+                    }
+                    completedInvoked = true;
+
+                    if (err) {
+                        reject(err);
+                    } else {
+                        if (vscode.FileType.File === stat.type) {
+                            this.emitFileRenamed(oldUri, newUri);
+                        }
+
+                        resolve();
+                    }
+                };
 
                 try {
+                    stat = await this.statInner(oldUri);
+
                     conn.client.move(
                         toWebDAVPath(oldUri.path),
                         toWebDAVPath(newUri.path),
@@ -531,22 +571,24 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        // TODO: implement
-        return {
-            dispose: () => {
-
-            }
-        };
-    }
-
-    /**
-     * @inheritdoc
-     */
     public writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         return this.forConnection(uri, (conn) => {
             return new Promise<void>(async (resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+                let completedInvoked = false;
+                const COMPLETED = (err: any) => {
+                    if (completedInvoked) {
+                        return;
+                    }
+                    completedInvoked = true;
+
+                    if (err) {
+                        reject(err);
+                    } else {
+                        this.emitFileWrite(uri);
+
+                        resolve();
+                    }
+                };
 
                 try {
                     this.throwIfWriteFileIsNotAllowed(

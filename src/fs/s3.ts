@@ -125,6 +125,8 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                     Bucket: this.getBucket(uri),
                     Key: toS3Path(uri.path),
                 }).promise();
+
+                this.emitFileDeleted( uri );
             }
         });
     }
@@ -465,6 +467,7 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
             }
 
             const ITEMS_TO_MOVE: {
+                afterMoved?: () => any,
                 oldPath: string;
                 newPath: string;
             }[] = [];
@@ -531,6 +534,9 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                 });
             } else {
                 ITEMS_TO_MOVE.push({
+                    afterMoved: () => {
+                        this.emitFileRenamed(oldUri, newUri);
+                    },
                     oldPath: toS3Path(oldUri.path),
                     newPath: toS3Path(newUri.path),
                 });
@@ -552,6 +558,12 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                     Bucket: OLD_BUCKET,
                     Key: OLD_PATH,
                 }).promise();
+
+                if (I.afterMoved) {
+                    await Promise.resolve(
+                        I.afterMoved()
+                    );
+                }
             }
 
             for (const I of ITEMS_TO_DELETE) {
@@ -663,18 +675,6 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        // TODO: implement
-        return {
-            dispose: () => {
-
-            }
-        };
-    }
-
-    /**
-     * @inheritdoc
-     */
     public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
             this.throwIfWriteFileIsNotAllowed(
@@ -699,6 +699,8 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
 
             await conn.client.putObject(PARAMS)
                              .promise();
+
+            this.emitFileWrite( uri );
         });
     }
 }

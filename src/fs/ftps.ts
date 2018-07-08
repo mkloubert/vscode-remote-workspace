@@ -112,7 +112,23 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
             const STAT = await this.statInner(uri);
 
             return new Promise<void>((resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+                let completedInvoked = false;
+                const COMPLETED = (err) => {
+                    if (completedInvoked) {
+                        return;
+                    }
+                    completedInvoked = true;
+
+                    if (err) {
+                        reject(err);
+                    } else {
+                        if (vscode.FileType.File === STAT.type) {
+                            this.emitFileDeleted( uri );
+                        }
+
+                        resolve();
+                    }
+                };
 
                 try {
                     const PATH = vscrw.normalizePath(uri.path);
@@ -410,10 +426,28 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
     public rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }) {
         return this.forConnection(oldUri, (conn) => {
             return new Promise<void>(async (resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+                let oldStat: FTPsFileStat;
+
+                let completedInvoked = false;
+                const COMPLETED = (err) => {
+                    if (completedInvoked) {
+                        return;
+                    }
+                    completedInvoked = true;
+
+                    if (err) {
+                        reject(err);
+                    } else {
+                        if (vscode.FileType.File === oldStat.type) {
+                            this.emitFileRenamed(oldUri, newUri);
+                        }
+
+                        resolve();
+                    }
+                };
 
                 try {
-                    const OLD_STAT = await this.statInner(oldUri, conn);
+                    oldStat = await this.statInner(oldUri, conn);
 
                     const NEW_STAT = await this.tryGetStat(newUri, conn);
                     if (false !== NEW_STAT) {
@@ -548,22 +582,30 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        // TODO: implement
-        return {
-            dispose: () => {
-
-            }
-        };
-    }
-
-    /**
-     * @inheritdoc
-     */
     public writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         return this.forConnection(uri, (conn) => {
             return new Promise<void>(async (resolve, reject) => {
-                const COMPLETED = vscode_helpers.createCompletedAction(resolve, reject);
+                const STAT = await this.tryGetStat(uri);
+
+                let completedInvoked = false;
+                const COMPLETED = (err) => {
+                    if (completedInvoked) {
+                        return;
+                    }
+                    completedInvoked = true;
+
+                    if (err) {
+                        reject(err);
+                    } else {
+                        if (false === STAT) {
+                            this.emitFileCreated( uri );
+                        }
+
+                        this.emitFileWrite( uri );
+
+                        resolve();
+                    }
+                };
 
                 try {
                     this.throwIfWriteFileIsNotAllowed(

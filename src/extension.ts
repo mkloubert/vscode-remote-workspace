@@ -1396,6 +1396,22 @@ function uriParamsToObject(uri: URL.Url | vscode.Uri): KeyValuePairs<string> {
 }
 
 /**
+ * Creates a new URI with a new path.
+ *
+ * @param {vscode.Uri} uri The base URI.
+ * @param {string} newPath The new path.
+ *
+ * @return {vscode.Uri} The URI with the new path.
+ */
+export function uriWithNewPath(uri: vscode.Uri, newPath: string): vscode.Uri {
+    if (uri) {
+        return vscode.Uri.parse(`${ vscode_helpers.normalizeString(uri.scheme) }://${ uri.authority }${ vscode_helpers.toStringSafe(newPath) }${ vscode_helpers.isEmptyString(uri.query) ? '' : ('?' + uri.query) }`);
+    }
+
+    return <any>uri;
+}
+
+/**
  * Returns a new URI object without authority / credentials.
  *
  * @param {vscode.Uri} uri The input value.

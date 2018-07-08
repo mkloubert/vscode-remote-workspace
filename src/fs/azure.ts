@@ -85,9 +85,13 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
         }
 
         for (const B of blobsToDelete) {
+            const BLOB_URI = uriWithNewPath(uri, B);
+
             await this.deleteBlob(
-                uriWithNewPath(uri, B)
+                BLOB_URI
             );
+
+            this.emitFileDeleted( BLOB_URI );
         }
     }
 
@@ -477,6 +481,11 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
             for (const I of ITEMS_TO_MOVE) {
                 await COPY_BLOB( I.oldPath, I.newPath );
                 await DELETE_BLOB( I.oldPath );
+
+                this.emitFileRenamed(
+                    uriWithNewPath(oldUri, I.oldPath),
+                    uriWithNewPath(newUri, I.newPath),
+                );
             }
         });
     }
@@ -567,18 +576,6 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
         return stat;
     }
 
-    /**
-     * @inheritdoc
-     */
-    public watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
-        // TODO: implement
-        return {
-            dispose: () => {
-
-            }
-        };
-    }
-
     private async writeBlob(uri: vscode.Uri, data: Buffer) {
         const PATH = toAzurePath(uri.path);
 
@@ -625,8 +622,16 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
             uri
         );
 
+        const STAT = await this.tryGetStat(uri);
+
         await this.writeBlob(uri,
                              vscrw.asBuffer(content));
+
+        if (false === STAT) {
+            this.emitFileCreated( uri );
+        }
+
+        this.emitFileWrite( uri );
     }
 }
 
