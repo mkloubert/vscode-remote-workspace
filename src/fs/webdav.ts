@@ -451,13 +451,25 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
      * Register file system to extension.
      *
      * @param {vscode.ExtensionContext} context The extension context.
+     *
+     * @return {WebDAVFileSystem} The registrated provider instance.
      */
     public static register(context: vscode.ExtensionContext) {
-        context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider(WebDAVFileSystem.scheme,
-                                                        new WebDAVFileSystem(),
-                                                        { isCaseSensitive: true })
-        );
+        const NEW_FS = new WebDAVFileSystem();
+
+        try {
+            context.subscriptions.push(
+                vscode.workspace.registerFileSystemProvider(WebDAVFileSystem.scheme,
+                                                            NEW_FS,
+                                                            { isCaseSensitive: true })
+            );
+        } catch (e) {
+            vscode_helpers.tryDispose( NEW_FS );
+
+            throw e;
+        }
+
+        return NEW_FS;
     }
 
     /**

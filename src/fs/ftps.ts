@@ -387,8 +387,10 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
      * Register file system to extension.
      *
      * @param {vscode.ExtensionContext} context The extension context.
+     *
+     * @return {FTPsFileSystem} The registrated provider instance.
      */
-    public static register(context: vscode.ExtensionContext) {
+    public static register(context: vscode.ExtensionContext): FTPsFileSystem {
         const NEW_FS = new FTPsFileSystem();
 
         try {
@@ -402,6 +404,8 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
 
             throw e;
         }
+
+        return NEW_FS;
     }
 
     /**

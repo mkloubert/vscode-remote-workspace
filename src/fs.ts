@@ -47,7 +47,7 @@ export interface WriteFileOptions {
  * SFTP file system.
  */
 export abstract class FileSystemBase extends vscode_helpers.DisposableBase implements vscode.FileSystemProvider {
-    private readonly _EVENT_EMITTER;
+    private readonly _EVENT_EMITTER: vscode.EventEmitter<vscode.FileChangeEvent[]>;
 
     /**
      * Initializes a new instance of that class.

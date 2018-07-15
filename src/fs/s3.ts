@@ -434,13 +434,25 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
      * Register file system to extension.
      *
      * @param {vscode.ExtensionContext} context The extension context.
+     *
+     * @return {S3FileSystem} The registrated provider instance.
      */
     public static register(context: vscode.ExtensionContext) {
-        context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider(S3FileSystem.scheme,
-                                                        new S3FileSystem(),
-                                                        { isCaseSensitive: true })
-        );
+        const NEW_FS = new S3FileSystem();
+
+        try {
+            context.subscriptions.push(
+                vscode.workspace.registerFileSystemProvider(S3FileSystem.scheme,
+                                                            NEW_FS,
+                                                            { isCaseSensitive: true })
+            );
+        } catch (e) {
+            vscode_helpers.tryDispose(NEW_FS);
+
+            throw e;
+        }
+
+        return NEW_FS;
     }
 
     /**

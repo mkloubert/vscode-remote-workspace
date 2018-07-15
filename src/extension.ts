@@ -30,6 +30,7 @@ import * as SimpleSocket from 'node-simple-socket';
 import * as URL from 'url';
 import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
+import * as vscrw_fs from './fs';
 import * as vscrw_fs_azure from './fs/azure';
 import * as vscrw_fs_dropbox from './fs/dropbox';
 import * as vscrw_fs_ftp from './fs/ftp';
@@ -166,7 +167,10 @@ let logger: vscode_helpers.Logger;
 let nextReceiveRemoteURICommandId = Number.MIN_SAFE_INTEGER;
 let outputChannel: vscode.OutputChannel;
 let packageFile: PackageFile;
-const REGISTRATED_SCHEMES: string[] = [];
+const REGISTRATED_SCHEMES: {
+    provider: vscrw_fs.FileSystemBase,
+    scheme: string,
+}[] = [];
 
 type StringRepository = { [key: string]: string };
 
@@ -314,12 +318,13 @@ export async function activate(context: vscode.ExtensionContext) {
             outputChannel.append(`Register provider for '${ C.scheme }' scheme ... `);
 
             try {
-                C.register( context );
+                const PROVIDER: vscrw_fs.FileSystemBase = C.register( context );
                 outputChannel.appendLine('[OK]');
 
-                REGISTRATED_SCHEMES.push(
-                    vscode_helpers.normalizeString(C.scheme),
-                );
+                REGISTRATED_SCHEMES.push({
+                    provider: PROVIDER,
+                    scheme: vscode_helpers.normalizeString(C.scheme),
+                });
             } catch (e) {
                 outputChannel.appendLine(`[ERROR: '${ vscode_helpers.toStringSafe(e) }']`);
             }
@@ -1253,7 +1258,8 @@ function isRemoteExecutionSupported(uri: vscode.Uri) {
             case vscrw_fs_ftp.FTPFileSystem.scheme:
             case vscrw_fs_ftps.FTPsFileSystem.scheme:
             case vscrw_fs_sftp.SFTPFileSystem.scheme:
-                return REGISTRATED_SCHEMES.indexOf(SCHEME) > -1;
+                return REGISTRATED_SCHEMES.map(rs => rs.scheme)
+                                          .indexOf(SCHEME) > -1;
         }
     }
 

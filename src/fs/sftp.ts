@@ -536,20 +536,25 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      * Register file system to extension.
      *
      * @param {vscode.ExtensionContext} context The extension context.
+     *
+     * @return {SFTPFileSystem} The registrated provider instance.
      */
     public static register(context: vscode.ExtensionContext) {
-        const FS_PROVIDER = new SFTPFileSystem();
+        const NEW_FS = new SFTPFileSystem();
+
         try {
             context.subscriptions.push(
                 vscode.workspace.registerFileSystemProvider(SFTPFileSystem.scheme,
-                                                            FS_PROVIDER,
+                                                            NEW_FS,
                                                             { isCaseSensitive: true })
             );
         } catch (e) {
-            vscode_helpers.tryDispose( FS_PROVIDER );
+            vscode_helpers.tryDispose( NEW_FS );
 
             throw e;
         }
+
+        return NEW_FS;
     }
 
     /**

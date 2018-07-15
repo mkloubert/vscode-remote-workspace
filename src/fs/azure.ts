@@ -405,13 +405,25 @@ export class AzureBlobFileSystem extends vscrw_fs.FileSystemBase {
      * Register file system to extension.
      *
      * @param {vscode.ExtensionContext} context The extension context.
+     *
+     * @return {AzureBlobFileSystem} The registrated provider instance.
      */
     public static register(context: vscode.ExtensionContext) {
-        context.subscriptions.push(
-            vscode.workspace.registerFileSystemProvider(AzureBlobFileSystem.scheme,
-                                                        new AzureBlobFileSystem(),
-                                                        { isCaseSensitive: true })
-        );
+        const NEW_FS = new AzureBlobFileSystem();
+
+        try {
+            context.subscriptions.push(
+                vscode.workspace.registerFileSystemProvider(AzureBlobFileSystem.scheme,
+                                                            NEW_FS,
+                                                            { isCaseSensitive: true })
+            );
+        } catch (e) {
+            vscode_helpers.tryDispose(NEW_FS);
+
+            throw e;
+        }
+
+        return NEW_FS;
     }
 
     /**
