@@ -23,11 +23,11 @@ import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
-const WebDAV = require('webdav-client');
+import * as WebDAV from 'webdav-client';
 
 interface WebDAVConnection {
     binaryEncoding: string;
-    client: any;
+    client: WebDAV.Connection;
     encoding: string;
 }
 
@@ -372,7 +372,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri,
                                                                     ssl ? 443 : 80);
 
-        let authenticator: any;
+        let authenticator: WebDAV.BasicAuthenticator;
         if (!_.isNil(HOST_AND_CRED.user) || !_.isNil(HOST_AND_CRED.password)) {
             authenticator = new WebDAV.BasicAuthenticator();
         }

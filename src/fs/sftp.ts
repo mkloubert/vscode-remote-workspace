@@ -121,6 +121,46 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
     /**
      * @inheritdoc
      */
+    public createTerminal(uri: vscode.Uri): vscode.TerminalRenderer {
+        const NO_AUTH_URI = vscrw.uriWithoutAuthority(uri);
+
+        let shell: vscode.TerminalRenderer;
+
+        const ON_NEW_LINE = (isInitial = false) => {
+            shell.write(`sftp@${ NO_AUTH_URI.authority }:${ vscrw.normalizePath(NO_AUTH_URI.path) }$ `);
+        };
+
+        shell = vscrw_fs.createRemoteTerminal({
+            onLine: (line) => {
+                return this.forConnection(uri, async (conn) => {
+                    shell.write("\r\n");
+
+                    const RESULT = await execServerCommand(conn.client, line);
+                    if (RESULT) {
+                        RESULT.toString('utf8').split("\n").forEach(l => {
+                            while (l.endsWith("\r")) {
+                                l = l.substr(0, l.length - 1);
+                            }
+
+                            shell.write(l);
+                            shell.write("\r\n");
+                        });
+                    }
+                });
+            },
+            onNewLine: () => {
+                ON_NEW_LINE();
+            },
+            uri: uri,
+        });
+
+        ON_NEW_LINE(true);
+        return shell;
+    }
+
+    /**
+     * @inheritdoc
+     */
     public async delete(uri: vscode.Uri, options: { recursive: boolean }) {
         await this.forConnection(uri, async (conn) => {
             const STAT = await this.statInner( uri, conn );
@@ -632,6 +672,13 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
 
             return stat;
         }, existingConn);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public get supportsTerminal() {
+        return true;
     }
 
     private async testConnection(cacheKey: string): Promise<SFTPConnection | false> {

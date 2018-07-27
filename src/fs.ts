@@ -25,6 +25,26 @@ import * as vscode_helpers from 'vscode-helpers';
 export type CopyOptions = { overwrite: boolean };
 
 /**
+ * Options for a 'createTerminal()' method of a file system provider.
+ */
+export interface CreateRemoteTerminalOptions {
+    /**
+     * Is invoked if a line (with a command) should be handled.
+     *
+     * @param {string} line The line (with the command).
+     */
+    onLine: (line: string) => any;
+    /**
+     * Is invoked if a new line is requested.
+     */
+    onNewLine: () => any;
+    /**
+     * The underlying URI, the terminal is for.
+     */
+    uri: vscode.Uri;
+}
+
+/**
  * An directory item.
  */
 export type DirectoryEntry = [ string, vscode.FileType ];
@@ -42,6 +62,12 @@ export interface WriteFileOptions {
      */
     overwrite: boolean;
 }
+
+const KEY_BACKSPACE = String.fromCharCode(127);
+const KEY_DOWN = String.fromCharCode(27, 91, 66);
+const KEY_LEFT = String.fromCharCode(27, 91, 68);
+const KEY_RIGHT = String.fromCharCode(27, 91, 67);
+const KEY_UP = String.fromCharCode(27, 91, 65);
 
 /**
  * SFTP file system.
@@ -63,6 +89,17 @@ export abstract class FileSystemBase extends vscode_helpers.DisposableBase imple
      * @inheritdoc
      */
     public abstract async createDirectory(uri: vscode.Uri);
+
+    /**
+     * Creates a remote terminal for an URI.
+     *
+     * @param {vscode.Uri} uri The URI.
+     *
+     * @return {vscode.TerminalRenderer} The created terminal.
+     */
+    public createTerminal(uri: vscode.Uri): vscode.TerminalRenderer {
+        throw new Error('Not implemented');
+    }
 
     /**
      * @inheritdoc
@@ -104,6 +141,13 @@ export abstract class FileSystemBase extends vscode_helpers.DisposableBase imple
     public abstract async stat(uri: vscode.Uri): Promise<vscode.FileStat>;
 
     /**
+     * Gets if the provider supports an terminal or not.
+     */
+    public get supportsTerminal() {
+        return false;
+    }
+
+    /**
      * Throw an exception if writing a file is not allowed.
      *
      * @param {vscode.FileStat|false} stat The file information.
@@ -135,4 +179,81 @@ export abstract class FileSystemBase extends vscode_helpers.DisposableBase imple
      * @inheritdoc
      */
     public abstract async writeFile(uri: vscode.Uri, content: Uint8Array, options: WriteFileOptions): Promise<void>;
+}
+
+/**
+ * Creates a new virtual terminal instance with a common behavior.
+ *
+ * @param {CreateRemoteTerminalOptions} opts The options for the new terminal.
+ *
+ * @return {vscode.TerminalRenderer} The new terminal instance.
+ */
+export function createRemoteTerminal(opts: CreateRemoteTerminalOptions): vscode.TerminalRenderer {
+    const SHELL = vscode.window.createTerminalRenderer(
+        `${ vscrw.uriWithoutAuthority(opts.uri) }`
+    );
+
+    let line = '';
+
+    const ON_NEW_LINE = () => {
+        try {
+            Promise.resolve( opts.onNewLine() ).then(() => {
+            }, (err) => {
+                vscrw.showError(err);
+            });
+        } catch (e) {
+            vscrw.showError(e);
+        }
+    };
+
+    SHELL.onDidAcceptInput((data) => {
+        try {
+            data = vscode_helpers.toStringSafe(data);
+            if ('' === data) {
+                return;
+            }
+
+            if (KEY_BACKSPACE === data) {
+                SHELL.write("\r");
+
+                ON_NEW_LINE();
+                if (line.length > 0) {
+                    SHELL.write( vscode_helpers.repeat(' ', line.length)
+                                               .joinToString() );
+
+                    line = line.substr(0, line.length - 1);
+                }
+
+                SHELL.write("\r");
+
+                ON_NEW_LINE();
+                SHELL.write(line);
+
+                return;
+            }
+
+            if ([ KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP ].indexOf(data) > -1) {
+                return;
+            }
+
+            if ('\r' === data) {
+                if ('' !== line.trim()) {
+                    Promise.resolve( opts.onLine(line) ).then(() => {
+                        ON_NEW_LINE();
+                    }, (err) => {
+                        vscrw.showError(err);
+                    });
+                }
+
+                line = '';
+            } else {
+                line += data;
+                SHELL.write(data);
+            }
+        } catch (e) {
+            vscrw.showError(e);
+        }
+    });
+
+    return SHELL;
 }

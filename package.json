@@ -2,11 +2,12 @@
     "name": "vscode-remote-workspace",
     "displayName": "Remote Workspace",
     "description": "Multi protocol support (like Azure, Dropbox, S3, (S)FTP or Slack) for handling remote files like local ones.",
-    "version": "0.31.0",
+    "version": "0.32.0",
     "publisher": "mkloubert",
     "engines": {
-        "vscode": "^1.25.0"
+        "vscode": "^1.26.0"
     },
+    "enableProposedAPI": true,
     "categories": [
         "Azure",
         "Other"
@@ -54,6 +55,11 @@
             {
                 "command": "extension.remote.workspace.executeRemoteCommmand",
                 "title": "Execute Remote Command ...",
+                "category": "Remote Workspace"
+            },
+            {
+                "command": "extension.remote.workspace.openTerminal",
+                "title": "Open Terminal ...",
                 "category": "Remote Workspace"
             },
             {

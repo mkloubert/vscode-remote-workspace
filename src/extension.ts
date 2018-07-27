@@ -450,7 +450,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     ).orderBy(x => vscode_helpers.normalizeString(x.name))
                      .thenBy(x => x.index)
                      .select(ws => {
-                                 let name = vscode_helpers.toStringSafe(ws.name);
+                                 let name = vscode_helpers.toStringSafe(ws.name).trim();
                                  if ('' === name) {
                                      name = `Workspace #${ ws.index }`;
                                  }
@@ -504,6 +504,73 @@ export async function activate(context: vscode.ExtensionContext) {
                             QUICK_PICKS,
                             {
                                 placeHolder: "Select the workspace, where you want to run the command ...",
+                            }
+                        );
+                    }
+
+                    if (selectedItem) {
+                        if (selectedItem.action) {
+                            await selectedItem.action();
+                        }
+                    }
+                } catch (e) {
+                    showError(e);
+                }
+            }),
+
+            // openTerminal
+            vscode.commands.registerCommand('extension.remote.workspace.openTerminal', async () => {
+                try {
+                    const WORKSPACES = vscode_helpers.asArray(
+                        vscode.workspace.workspaceFolders
+                    ).filter(ws => {
+                        return supportsTerminal(ws.uri);
+                    });
+
+                    const QUICK_PICKS: ActionQuickPickItem[] = vscode_helpers.from(
+                        WORKSPACES
+                    ).orderBy(x => vscode_helpers.normalizeString(x.name))
+                     .thenBy(x => x.index)
+                     .select(ws => {
+                                 let name = vscode_helpers.toStringSafe(ws.name).trim();
+                                 if ('' === name) {
+                                     name = `Workspace #${ ws.index }`;
+                                 }
+
+                                 return {
+                                     action: async () => {
+                                         const SCHEME = vscode_helpers.normalizeString( ws.uri.scheme );
+
+                                         REGISTRATED_SCHEMES.forEach(rs => {
+                                             if (SCHEME !== rs.scheme) {
+                                                 return;
+                                             }
+
+                                             const SHELL = rs.provider.createTerminal( ws.uri );
+                                             SHELL.terminal.show();
+                                         });
+                                     },
+                                     label: name,
+                                     detail: `${ ws.uri }`,
+                                 };
+                             }).toArray();
+
+                    if (QUICK_PICKS.length < 1) {
+                        vscode.window.showWarningMessage(
+                            "No supported workspace found, which is able to run a remote terminal!"
+                        );
+
+                        return;
+                    }
+
+                    let selectedItem: ActionQuickPickItem;
+                    if (1 === QUICK_PICKS.length) {
+                        selectedItem = QUICK_PICKS[0];
+                    } else {
+                        selectedItem = await vscode.window.showQuickPick(
+                            QUICK_PICKS,
+                            {
+                                placeHolder: "Select the workspace, where you want to open the terminal for ...",
                             }
                         );
                     }
@@ -1370,6 +1437,22 @@ export async function showError(err): Promise<string | undefined> {
             `ERROR: ${ vscode_helpers.toStringSafe(err) }`
         );
     }
+}
+
+function supportsTerminal(uri: vscode.Uri) {
+    if (uri) {
+        const SCHEME = vscode_helpers.normalizeString( uri.scheme );
+
+        for (const RS of REGISTRATED_SCHEMES) {
+            if (SCHEME === RS.scheme) {
+                if (vscode_helpers.toBooleanSafe( RS.provider.supportsTerminal )) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 function toUriKey(uri: vscode.Uri) {
