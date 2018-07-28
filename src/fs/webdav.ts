@@ -23,19 +23,12 @@ import * as vscode from 'vscode';
 import * as vscode_helpers from 'vscode-helpers';
 import * as vscrw from '../extension';
 import * as vscrw_fs from '../fs';
-const WebDAV = require('webdav-client');
+import * as WebDAV from 'webdav-client';
 
 interface WebDAVConnection {
     binaryEncoding: string;
     client: any;
     encoding: string;
-}
-
-interface WebDAVConnectionOptions {
-    authenticator?: any;
-    password?: string;
-    url: string;
-    username?: string;
 }
 
 interface WebDAVFileStat extends vscode.FileStat {
@@ -372,12 +365,28 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         const HOST_AND_CRED = await vscrw.extractHostAndCredentials(uri,
                                                                     ssl ? 443 : 80);
 
-        let authenticator: any;
+        let authenticator: WebDAV.Authenticator;
         if (!_.isNil(HOST_AND_CRED.user) || !_.isNil(HOST_AND_CRED.password)) {
-            authenticator = new WebDAV.BasicAuthenticator();
+            const AUTH_TYPE = vscode_helpers.normalizeString(PARAMS['authtype']);
+
+            switch (AUTH_TYPE) {
+                case '':
+                case 'b':
+                case 'basic':
+                    authenticator = new WebDAV.BasicAuthenticator();
+                    break;
+
+                case 'd':
+                case 'digest':
+                    authenticator = new WebDAV.DigestAuthenticator();
+                    break;
+
+                default:
+                    throw new Error(`Authentication type '${ AUTH_TYPE }' is not supported!`);
+            }
         }
 
-        const OPTS: WebDAVConnectionOptions = {
+        const CONN_OPTS: WebDAV.ConnectionOptions = {
             authenticator: authenticator,
             password: HOST_AND_CRED.password,
             username: HOST_AND_CRED.user,
@@ -385,7 +394,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
         };
 
         return {
-            client: new WebDAV.Connection(OPTS),
+            client: new WebDAV.Connection(CONN_OPTS),
             binaryEncoding: binEnc,
             encoding: enc,
         };

@@ -37,6 +37,7 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
      * [Remarks](#remarks--1)
    * [WebDAV](#webdav-)
      * [Parameters](#parameters--7)
+       * [authType](#authtype-)
 3. [Commands](#commands-)
 4. [Logs](#logs-)
 5. [Support and contribute](#support-and-contribute-)
@@ -357,8 +358,18 @@ URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?para
 | `base` | The base path, that is used as prefix for all requests. | `base=nextcloud/remote.php/webdav/` |
 | `binEncoding` | The [encoding](https://nodejs.org/api/buffer.html#buffer_buf_tostring_encoding_start_end) for reading and writing binary files to use. Default: `binary` | `binEncoding=utf8` |
 | `encoding` | The [encoding](https://nodejs.org/api/buffer.html#buffer_buf_tostring_encoding_start_end) for reading and writing text files to use. Default: `binary` | `encoding=utf8` |
+| `authType` | Kind of authentication to use if at least a username and/or password is defined (s. [authType](#authtype-). Default: `basic` | `authType=digest` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=webdav_uri_params.json` |
 | `ssl` | Use secure HTTP or not. Can be `0` or `1`. Default: `0` | `ssl=1` |
+
+#### authType [[&uarr;](#parameters--7)]
+
+Defines, what type of authentication should be used, if at least a username and/or password is defined. Possible values are:
+
+| Name | Alternatives | Description | Example | 
+| ---- | ------------ | ----------- | ------- |
+| `basic` | `b` | [Basic access authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) |
+| `digest` | `d` | [Digest access authentication](https://en.wikipedia.org/wiki/Digest_access_authentication) |
 
 ## Commands [[&uarr;](#table-of-contents)]
 
