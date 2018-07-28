@@ -366,8 +366,8 @@ URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?para
 
 Defines, what type of authentication should be used, if at least a username and/or password is defined. Possible values are:
 
-| Name | Alternatives | Description | Example | 
-| ---- | ------------ | ----------- | ------- |
+| Name | Alternatives | Description |
+| ---- | ------------ | ----------- |
 | `basic` | `b` | [Basic access authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) |
 | `digest` | `d` | [Digest access authentication](https://en.wikipedia.org/wiki/Digest_access_authentication) |
 
