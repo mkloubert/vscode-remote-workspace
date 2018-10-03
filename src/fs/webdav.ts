@@ -27,7 +27,7 @@ import * as WebDAV from 'webdav-client';
 
 interface WebDAVConnection {
     binaryEncoding: string;
-    client: any;
+    client: WebDAV.Connection;
     encoding: string;
 }
 

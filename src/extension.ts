@@ -39,6 +39,7 @@ import * as vscrw_fs_s3 from './fs/s3';
 import * as vscrw_fs_sftp from './fs/sftp';
 import * as vscrw_fs_slack from './fs/slack';
 import * as vscrw_fs_webdav from './fs/webdav';
+import * as vscrw_values from './values';
 
 /**
  * A quick pick item with an (optional) action.
@@ -163,6 +164,7 @@ const KEY_LAST_GIT_ARGS = 'vscrwLastGitArgs';
 const KEY_LAST_KNOWN_VERSION = 'vscrwLastKnownVersion';
 const KEY_LAST_REMOTE_COMMANDS = 'vscrwLastRemoteCommands';
 const KEY_PARAMS = 'params';
+const KEY_VALUES = 'values';
 let logger: vscode_helpers.Logger;
 let nextReceiveRemoteURICommandId = Number.MIN_SAFE_INTEGER;
 let outputChannel: vscode.OutputChannel;
@@ -172,7 +174,10 @@ const REGISTRATED_SCHEMES: {
     scheme: string,
 }[] = [];
 
-type StringRepository = { [key: string]: string };
+/**
+ * A key value pair of string values with string keys.
+ */
+export type StringRepository = { [key: string]: string };
 
 export async function activate(context: vscode.ExtensionContext) {
     extension = context;
@@ -1244,8 +1249,15 @@ export function getUriParams(uri: URL.Url | vscode.Uri): KeyValuePairs<string> {
         );
     }
 
-    // we do not need the 'params' parameter anymore
+    const VALUE_FILE = vscode_helpers.toStringSafe( URI_PARAMS[KEY_VALUES] );
+
+    // we do not need these parameters anymore
     delete PARAMS[ KEY_PARAMS ];
+    delete PARAMS[ KEY_VALUES ];
+
+    vscrw_values.applyExternalValues(
+        VALUE_FILE, PARAMS
+    );
 
     return PARAMS;
 }
@@ -1383,7 +1395,7 @@ function toUriKey(uri: vscode.Uri) {
     }
 }
 
-function uriParamsToObject(uri: URL.Url | vscode.Uri): KeyValuePairs<string> {
+function uriParamsToObject(uri: any): KeyValuePairs<string> {
     if (_.isNil(uri)) {
         return <any>uri;
     }

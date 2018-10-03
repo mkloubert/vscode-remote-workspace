@@ -17,6 +17,10 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
 2. [How to use](#how-to-use-)
    * [About parameters](#about-parameters-)
      * [Import parameters](#import-parameters-)
+     * [Placeholders](#placeholders-)
+       * [Code](#code-)
+       * [Environment variables](#environment-variables-)
+       * [Static](#static-)
    * [Azure](#azure-)
      * [Parameters](#parameters-)
      * [Remarks](#remarks-)
@@ -114,6 +118,104 @@ Relative paths will be mapped to the user's home directory.
 
 Explicit URI parameters, which are also defined in such an external file, will be overwritten by the values of the file.
 
+#### Placeholders [[&uarr;](#about-parameters-)]
+
+An URI parameter can store placeholders, which are replaced by the values of an external file.
+
+For example, you can create a file, like `my_values.json`, inside your home directory with the following content:
+
+```json
+{
+    "importEnvVars": true,
+    "exclude": [
+        "fooParam"
+    ],
+    "values": {
+        "ENC": {
+            "code": " ('UTF' + '8').toLowerCase() ",
+            "type": "code"
+        },
+        "FOO": "bar",
+        "SSL": {
+            "value": 1
+        }
+    }
+}
+```
+
+You can now place them into the values of parameters, by using the format `${VAR_NAME}`:
+
+```json
+{
+    "folders": [{
+        "uri": "webdav://myUser:myPassword@webdav.example.com/?values=my_values.json&ssl=${SSL}&encoding=${ENC}&binEncoding=${ENC}&fooParam=${FOO}",
+        "name": "My WebDAV folder"
+    }]
+}
+```
+
+If `importEnvVars` is set to `(true)`, all [environment variables of the current process](https://nodejs.org/api/process.html#process_process_env) will be imported automatically. The default value is `(false)`.
+
+Parameters, where placeholders DO NOT work:
+
+* `params`
+* `values`
+
+##### Code [[&uarr;](#placeholders-)]
+
+```json
+{
+    "values": {
+        "FOO": {
+            "code": " $h.normalizeString('b' + 'AR') ",
+            "type": "code"
+        }
+    }
+}
+```
+
+Code execution allows you to access the following constants, which contain modules, functions and special values:
+
+| Name | Description |
+| ---- | --------- |
+| `_` | [lodash](https://lodash.com/) module |
+| `$fs` | [fs-extra](https://github.com/jprichardson/node-fs-extra) module |
+| `$h` | [vscode-helpers](https://github.com/mkloubert/vscode-helpers) module |
+| `$l` | A [logger](https://mkloubert.github.io/vscode-helpers/modules/_logging_index_.html) object, s. [Logs](#logs-)) |
+| `$m` | [Moment.js](https://momentjs.com/) module, with [timezone](https://momentjs.com/timezone/) support |
+| `$os` | [os](https://nodejs.org/api/os.html) module |
+| `$p` | [path](https://nodejs.org/api/path.html) module |
+| `$r` | Extened `require()` function, which also allows to use [the modules of that extension](https://github.com/mkloubert/vscode-remote-workspace/blob/master/package.json). |
+| `$v` | An object with variables, like `$v['cache']`, which stores an object for caching values for later executions. |
+
+**Keep in mind**: Code is always executed synchronous and NOT via things like [promises](https://developers.google.com/web/fundamentals/primers/promises)!
+
+##### Environment variables [[&uarr;](#placeholders-)]
+
+```json
+{
+    "values": {
+        "FOO": {
+            "name": "SSH_AUTH_SOCK",
+            "type": "env"
+        }
+    }
+}
+```
+
+##### Static [[&uarr;](#placeholders-)]
+
+```json
+{
+    "values": {
+        "foo1": "bar1",
+        "Foo2": {
+            "value": 2
+        }
+    }
+}
+```
+
 ### Azure [[&uarr;](#how-to-use-)]
 
 URL Format: `azure://[account:key@][container][/path/to/file/or/folder][?param1=value1&param2=value2]`
@@ -145,6 +247,7 @@ For accessing local storage emulator, use something like that:
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=my_azure_account` |
 | `host` | The custom host address. | `host=azure.example.com` | 
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=azure_uri_params.json` | 
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 #### Remarks [[&uarr;](#azure-)]
 
@@ -170,6 +273,7 @@ URL Format: `dropbox://token[/path/to/file/or/folder][?param1=value1&param2=valu
 | ---- | --------- | --------- |
 | `auth` | A path to a file, that contains the part left to `@` (the API token). Relative paths will be mapped to the user's home directory. | `auth=dropbox_token` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=dropbox_uri_params.json` | 
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 ### FTP [[&uarr;](#how-to-use-)]
 
@@ -193,6 +297,7 @@ URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder][?param1=value1
 | `keepAlive` | Defines a time interval, in seconds, that sends a `NOOP` command automatically to keep the connection alive. | `keepAlive=15` |
 | `noop` | The custom [FTP command](https://en.wikipedia.org/wiki/List_of_FTP_commands) to execute to check if connection is still alive. Default: `NOOP` | `noop=SYST` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=ftp_uri_params.json` | 
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 ### FTPs [[&uarr;](#how-to-use-)]
 
@@ -218,6 +323,7 @@ URL Format: `ftps://[user:password@]host[:port][/path/to/a/folder][?param1=value
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=ftps_uri_params.json` | 
 | `rejectUnauthorized` | Reject unauthorized server certificates or not. Default: `0` | `rejectUnauthorized=1` |
 | `secure` | Use secure (`1`) or plain (`0`) FTP connection. Default: `1` | `secure=0` |
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 ### S3 Buckets [[&uarr;](#how-to-use-)]
 
@@ -241,6 +347,7 @@ Default value: `shared`
 | `environment` | Represents credentials from the environment. | [EnvironmentCredentials](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/EnvironmentCredentials.html) |
 | `file` | Represents credentials from a JSON file on disk. | [FileSystemCredentials](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/FileSystemCredentials.html) |
 | `shared` | Represents credentials loaded from shared credentials file. | [SharedIniFileCredentials](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SharedIniFileCredentials.html) |
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 #### Parameters [[&uarr;](#s3-buckets-)]
 
@@ -253,6 +360,7 @@ Default value: `shared`
 | `file` | If credential type is set to `file`, this defines the path to the `.json` file, which should be used. Relative paths will be mapped to the `.aws` sub folder inside the user's home directory. | `file=aws.json` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=s3_uri_params.json` | 
 | `profile` | If credential type is set to `shared`, this defines the name of the section inside the `.ini` file, which should be used. Default: `default` | `profile=mkloubert` |
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 | `varPrefix` | If credential type is set to `environment`, this defines the custom prefix for the environment variables (without `_` suffix!), which contain the credentials. Default: `AWS` | `varPrefix=MY_AWS_PREFIX` |
 
 ### SFTP [[&uarr;](#how-to-use-)]
@@ -290,6 +398,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?param1=value
 | `phrase` | The passphrase (or path to a file with it) for the key file, if needed. To prevent conflicts, you should additionally set `noPhraseFile` to `1`, if that value is explicitly a passphrase value and NO path to an external file. Relative file paths will be mapped to the user's home directory. | `phrase=myPassphrase` |
 | `timeout` | How long (in milliseconds) to wait for the SSH handshake to complete. Default: `20000` | `timeout=60000` |
 | `tryKeyboard` | Try keyboard-interactive user authentication if primary user authentication method fails. Can be `0` or `1`. Default: `0` | `tryKeyboard=1` |
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 ##### mode [[&uarr;](#parameters--4)]
 
@@ -332,6 +441,7 @@ URL Format: `slack://token@channel[/][?param1=value1&param2=value2]`
 | ---- | --------- | --------- | 
 | `auth` | A path to a file, that contains the part left to `@` (the API token). Relative paths will be mapped to the user's home directory. | `auth=slack_token` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=slack_uri_params.json` | 
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 #### Remarks [[&uarr;](#slack-)]
 
@@ -361,6 +471,7 @@ URL Format: `webdav://[user:password@]host[:port][/path/to/file/or/folder][?para
 | `authType` | Kind of authentication to use if at least a username and/or password is defined (s. [authType](#authtype-). Default: `basic` | `authType=digest` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=webdav_uri_params.json` |
 | `ssl` | Use secure HTTP or not. Can be `0` or `1`. Default: `0` | `ssl=1` |
+| `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 #### authType [[&uarr;](#parameters--7)]
 
