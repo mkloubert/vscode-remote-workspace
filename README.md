@@ -45,6 +45,7 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
 3. [Commands](#commands-)
 4. [Logs](#logs-)
 5. [Support and contribute](#support-and-contribute-)
+   * [Contributors](#contributors-)
 6. [Related projects](#related-projects-)
    * [node-simple-socket](#node-simple-socket-)
    * [vscode-helpers](#vscode-helpers-)
@@ -181,7 +182,7 @@ Code execution allows you to access the following constants, which contain modul
 | `_` | [lodash](https://lodash.com/) module |
 | `$fs` | [fs-extra](https://github.com/jprichardson/node-fs-extra) module |
 | `$h` | [vscode-helpers](https://github.com/mkloubert/vscode-helpers) module |
-| `$l` | A [logger](https://mkloubert.github.io/vscode-helpers/modules/_logging_index_.html) object, s. [Logs](#logs-)) |
+| `$l` | [Logger](https://mkloubert.github.io/vscode-helpers/modules/_logging_index_.html) object (s. [Logs](#logs-)) |
 | `$m` | [Moment.js](https://momentjs.com/) module, with [timezone](https://momentjs.com/timezone/) support |
 | `$os` | [os](https://nodejs.org/api/os.html) module |
 | `$p` | [path](https://nodejs.org/api/path.html) module |
@@ -297,6 +298,8 @@ URL Format: `ftp://[user:password@]host[:port][/path/to/a/folder][?param1=value1
 | `keepAlive` | Defines a time interval, in seconds, that sends a `NOOP` command automatically to keep the connection alive. | `keepAlive=15` |
 | `noop` | The custom [FTP command](https://en.wikipedia.org/wiki/List_of_FTP_commands) to execute to check if connection is still alive. Default: `NOOP` | `noop=SYST` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=ftp_uri_params.json` | 
+| `queue` | Use a queue for each action inside the connection. Default: `1` | `queue=0` |
+| `queueSize` | Maximum number of actions to execute at once inside a connection. Default: `1` | `queueSize=3` |
 | `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
 
 ### FTPs [[&uarr;](#how-to-use-)]
@@ -516,6 +519,10 @@ To work with the code:
 * now you can edit and debug there
 * commit your changes to your new branch and sync it with your forked GitHub repo
 * make a [pull request](https://github.com/mkloubert/vscode-remote-workspace/pulls)
+
+### Contributors [[&uarr;](#support-and-contribute-)]
+
+* [drpark](https://github.com/drpark)
 
 ## Related projects [[&uarr;](#table-of-contents)]
 

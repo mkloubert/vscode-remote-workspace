@@ -30,6 +30,8 @@ interface FTPConnection {
     client: any;
     followSymLinks: boolean;
     noop: string;
+    noQueue: boolean;
+    queue: any;
 }
 
 interface FTPConnectionCache {
@@ -281,7 +283,7 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
             return await executeServerCommand(CONN.client, execArgs.command);
         } finally {
-            await tryCloseConnection(CONN);
+            tryCloseConnection(CONN);
         }
     }
 
@@ -289,17 +291,31 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
         uri: vscode.Uri, action: (conn: FTPConnection) => TResult | PromiseLike<TResult>,
         existingConn?: FTPConnection
     ): Promise<TResult> {
-        try {
-            const USE_EXISTING_CONN = !_.isNil( existingConn );
-
-            const CONN = USE_EXISTING_CONN ? existingConn
-                                           : await this.openConnection(uri);
-
+        const DO_IT = async (connectionToUse: FTPConnection) => {
             if (action) {
                 return await Promise.resolve(
-                    action( CONN )
+                    action( connectionToUse )
                 );
             }
+        };
+
+        const USE_EXISTING_CONN = !_.isNil( existingConn );
+
+        const CONNECTION_TO_USE = USE_EXISTING_CONN ? existingConn
+                                                    : await this.openConnection(uri);
+
+        try {
+            if (CONNECTION_TO_USE.noQueue || USE_EXISTING_CONN) {
+                return await DO_IT(
+                    CONNECTION_TO_USE
+                );
+            }
+
+            return await CONNECTION_TO_USE.queue.add(async () => {
+                return DO_IT(
+                    CONNECTION_TO_USE
+                );
+            });
         } catch (e) {
             this.logger
                 .trace(e, 'fs.ftp.FTPFileSystem.forConnection()');
@@ -367,6 +383,13 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 tryCloseConnection( this._CONN_CACHE[ CACHE_KEY ] );
             }
 
+            let queueSize = parseInt(
+                vscode_helpers.toStringSafe(PARAMS['queuesize'])
+            );
+            if (isNaN(queueSize)) {
+                queueSize = 1;
+            }
+
             conn = {
                 cache: {
                     stats: {},
@@ -379,6 +402,10 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
                 }),
                 followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
                 noop: noop,
+                noQueue: !vscrw.isTrue(PARAMS['queue'], true),
+                queue: vscode_helpers.createQueue({
+                    concurrency: queueSize,
+                }),
             };
 
             if (!noCache) {
@@ -574,7 +601,7 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
             }
 
             return stat;
-        });
+        }, existingConn);
     }
 
     private async testConnection(cacheKey: string) {
@@ -672,7 +699,7 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
                 try {
                     this.throwIfWriteFileIsNotAllowed(
-                        await this.tryGetStat(uri), options,
+                        await this.tryGetStat(uri, conn), options,
                         uri
                     );
 
