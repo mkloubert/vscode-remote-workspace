@@ -32,6 +32,8 @@ interface FTPsConnection {
     cache: FTPsConnectionCache;
     client: any;
     followSymLinks: boolean;
+    noQueue: boolean;
+    queue: any;
 }
 
 interface FTPsConnectionCache {
@@ -155,18 +157,31 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
         uri: vscode.Uri, action: (conn: FTPsConnection) => TResult | PromiseLike<TResult>,
         existingConn?: FTPsConnection
     ): Promise<TResult> {
-        const USE_EXISTING_CONN = !_.isNil( existingConn );
-
-        let conn: FTPsConnection;
-        try {
-            conn = USE_EXISTING_CONN ? existingConn
-                                     : await this.openConnection(uri);
-
+        const DO_IT = async (connectionToUse: FTPsConnection) => {
             if (action) {
                 return await Promise.resolve(
-                    action( conn )
+                    action( connectionToUse )
                 );
             }
+        };
+
+        const USE_EXISTING_CONN = !_.isNil( existingConn );
+
+        const CONNECTION_TO_USE = USE_EXISTING_CONN ? existingConn
+                                                    : await this.openConnection(uri);
+
+        try {
+            if (CONNECTION_TO_USE.noQueue || USE_EXISTING_CONN) {
+                return await DO_IT(
+                    CONNECTION_TO_USE
+                );
+            }
+
+            return await CONNECTION_TO_USE.queue.add(async () => {
+                return DO_IT(
+                    CONNECTION_TO_USE
+                );
+            });
         } catch (e) {
             this.logger
                 .trace(e, 'fs.ftps.FTPsFileSystem.forConnection()');
@@ -174,7 +189,7 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
             throw e;
         } finally {
             if (!USE_EXISTING_CONN) {
-                tryCloseConnection(conn);
+                tryCloseConnection(CONNECTION_TO_USE);
             }
         }
     }
@@ -235,6 +250,14 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
                         vscode_helpers.toStringSafe(PARAMS['keepalive']).trim()
                     );
 
+                    let queueSize = parseInt(
+                        vscode_helpers.toStringSafe(PARAMS['queuesize'])
+                                      .trim()
+                    );
+                    if (isNaN(queueSize)) {
+                        queueSize = 1;
+                    }
+
                     const CLIENT = LEGACY ? new FTP_Legacy()
                                           : new FTP();
 
@@ -255,6 +278,10 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
                             },
                             client: CLIENT,
                             followSymLinks: FOLLOW,
+                            noQueue: !vscrw.isTrue(PARAMS['queue'], true),
+                            queue: vscode_helpers.createQueue({
+                                concurrency: queueSize,
+                            }),
                         };
 
                         // if (!noCache) {

@@ -385,6 +385,7 @@ export class FTPFileSystem extends vscrw_fs.FileSystemBase {
 
             let queueSize = parseInt(
                 vscode_helpers.toStringSafe(PARAMS['queuesize'])
+                              .trim()
             );
             if (isNaN(queueSize)) {
                 queueSize = 1;

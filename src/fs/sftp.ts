@@ -34,6 +34,8 @@ interface SFTPConnection {
     followSymLinks: boolean;
     keepMode: boolean;
     noop: string;
+    noQueue: boolean;
+    queue: any;
 }
 
 interface SFTPConnectionCache {
@@ -155,17 +157,31 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         uri: vscode.Uri, action: (conn: SFTPConnection) => TResult | PromiseLike<TResult>,
         existingConn?: SFTPConnection
     ): Promise<TResult> {
-        try {
-            const USE_EXISTING_CONN = !_.isNil( existingConn );
-
-            const CONN = USE_EXISTING_CONN ? existingConn
-                                           : await this.openConnection(uri);
-
+        const DO_IT = async (connectionToUse: SFTPConnection) => {
             if (action) {
                 return await Promise.resolve(
-                    action( CONN )
+                    action( connectionToUse )
                 );
             }
+        };
+
+        const USE_EXISTING_CONN = !_.isNil( existingConn );
+
+        const CONNECTION_TO_USE = USE_EXISTING_CONN ? existingConn
+                                                    : await this.openConnection(uri);
+
+        try {
+            if (CONNECTION_TO_USE.noQueue || USE_EXISTING_CONN) {
+                return await DO_IT(
+                    CONNECTION_TO_USE
+                );
+            }
+
+            return await CONNECTION_TO_USE.queue.add(async () => {
+                return DO_IT(
+                    CONNECTION_TO_USE
+                );
+            });
         } catch (e) {
             this.logger
                 .trace(e, 'fs.sftp.SFTPFileSystem.forConnection()');
@@ -235,6 +251,14 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             let noop = vscode_helpers.toStringSafe( PARAMS['noop'] );
             if (vscode_helpers.isEmptyString(noop)) {
                 noop = undefined;
+            }
+
+            let queueSize = parseInt(
+                vscode_helpers.toStringSafe(PARAMS['queuesize'])
+                              .trim()
+            );
+            if (isNaN(queueSize)) {
+                queueSize = 1;
             }
 
             conn = {
@@ -357,6 +381,10 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                 followSymLinks: vscrw.isTrue(PARAMS['follow'], true),
                 keepMode: vscrw.isTrue(PARAMS['keepmode'], true),
                 noop: noop,
+                noQueue: !vscrw.isTrue(PARAMS['queue'], true),
+                queue: vscode_helpers.createQueue({
+                    concurrency: queueSize,
+                }),
             };
 
             let agent = vscode_helpers.toStringSafe( PARAMS['agent'] );

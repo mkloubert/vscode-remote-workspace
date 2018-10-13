@@ -99,7 +99,7 @@ For example, you can create a file, lets say `sftp_server1_uri_params.json`, ins
     "debug": 1,
     "mode": 664,
     "key": "id_rsa",
-    "passphrase": "My Key Passphrase",
+    "phrase": "My Key Passphrase",
     "noPhraseFile": 1
 }
 ```
@@ -324,6 +324,8 @@ URL Format: `ftps://[user:password@]host[:port][/path/to/a/folder][?param1=value
 | `keepAlive` | Defines a time interval, in seconds, that sends a `NOOP` command automatically to keep the connection alive. Default `10` | `keepAlive=45` |
 | `legacy` | Use [ftp](https://www.npmjs.com/package/ftp) module instead of forked [@icetee/ftp](https://www.npmjs.com/package/@icetee/ftp), if you have problems. Default: `0` | `legacy=1` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=ftps_uri_params.json` | 
+| `queue` | Use a queue for each action inside the connection. Default: `1` | `queue=0` |
+| `queueSize` | Maximum number of actions to execute at once inside a connection. Default: `1` | `queueSize=3` |
 | `rejectUnauthorized` | Reject unauthorized server certificates or not. Default: `0` | `rejectUnauthorized=1` |
 | `secure` | Use secure (`1`) or plain (`0`) FTP connection. Default: `1` | `secure=0` |
 | `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |
@@ -399,6 +401,8 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?param1=value
 | `noPhraseFile` | `1` indicates, that `phrase` parameter will NEVER handled as file path. Default: `0` | `noPhraseFile=1` |
 | `params` | The name of an external file, which contains other parameters for the URI. s. [Import parameters](#import-parameters-) | `params=sftp_uri_params.json` | 
 | `phrase` | The passphrase (or path to a file with it) for the key file, if needed. To prevent conflicts, you should additionally set `noPhraseFile` to `1`, if that value is explicitly a passphrase value and NO path to an external file. Relative file paths will be mapped to the user's home directory. | `phrase=myPassphrase` |
+| `queue` | Use a queue for each action inside the connection. Default: `1` | `queue=0` |
+| `queueSize` | Maximum number of actions to execute at once inside a connection. Default: `1` | `queueSize=3` |
 | `timeout` | How long (in milliseconds) to wait for the SSH handshake to complete. Default: `20000` | `timeout=60000` |
 | `tryKeyboard` | Try keyboard-interactive user authentication if primary user authentication method fails. Can be `0` or `1`. Default: `0` | `tryKeyboard=1` |
 | `values` | The name of an external file, which contains [placeholders](#placeholders-) | `values=my_values.json` |

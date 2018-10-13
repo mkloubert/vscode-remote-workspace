@@ -2,10 +2,10 @@
     "name": "vscode-remote-workspace",
     "displayName": "Remote Workspace",
     "description": "Multi protocol support (like Azure, Dropbox, S3, (S)FTP or Slack) for handling remote files like local ones.",
-    "version": "0.34.0",
+    "version": "0.35.0",
     "publisher": "mkloubert",
     "engines": {
-        "vscode": "^1.27.0"
+        "vscode": "^1.28.0"
     },
     "categories": [
         "Azure",
@@ -106,13 +106,13 @@
     "readmeFilename": "README.md",
     "devDependencies": {
         "@types/aws-sdk": "^2.7.0",
-        "@types/lodash": "^4.14.116",
+        "@types/lodash": "^4.14.117",
         "@types/marked": "^0.3.0",
         "@types/mime-types": "^2.1.0",
         "@types/mocha": "^2.2.42",
         "@types/moment": "^2.13.0",
         "@types/moment-timezone": "^0.5.9",
-        "@types/node": "^7.0.67",
+        "@types/node": "^7.10.0",
         "@types/uuid": "^3.4.4",
         "tslint": "^5.11.0",
         "typescript": "^2.9.2",
@@ -121,7 +121,7 @@
     "dependencies": {
         "@icetee/ftp": "^1.0.3",
         "@slack/client": "^4.8.0",
-        "aws-sdk": "^2.329.0",
+        "aws-sdk": "^2.334.0",
         "azure-storage": "^2.10.1",
         "dropbox": "4.0.4",
         "ftp": "^0.3.10",
