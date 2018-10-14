@@ -598,7 +598,7 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
 
                 try {
                     this.throwIfWriteFileIsNotAllowed(
-                        await this.tryGetStat(uri), options,
+                        await this.tryGetStat(uri, conn), options,
                         uri
                     );
 

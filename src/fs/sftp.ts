@@ -103,7 +103,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public async createDirectory(uri: vscode.Uri) {
         await this.forConnection(uri, async (conn) => {
-            const STAT = await this.tryGetStat( uri );
+            const STAT = await this.tryGetStat( uri, conn );
             if (false !== STAT) {
                 if (vscode.FileType.Directory === STAT.type) {
                     throw vscode.FileSystemError.FileExists( uri );
@@ -704,9 +704,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
         });
     }
 
-    private async tryGetMod(uri: vscode.Uri, stat?: SFTPFileStat | false) {
+    private async tryGetMod(uri: vscode.Uri, stat?: SFTPFileStat | false, existingConn?: SFTPConnection) {
         if (arguments.length < 2) {
-            stat = await this.tryGetStat(uri);
+            stat = await this.tryGetStat(uri, existingConn);
         }
 
         let mod: number;
@@ -750,7 +750,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public async writeFile(uri: vscode.Uri, content: Uint8Array, options: vscrw_fs.WriteFileOptions) {
         await this.forConnection(uri, async (conn) => {
-            const STAT = await this.tryGetStat(uri);
+            const STAT = await this.tryGetStat(uri, conn);
 
             this.throwIfWriteFileIsNotAllowed(
                 STAT, options,
@@ -759,7 +759,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
 
             let oldMod: number;
             if (conn.keepMode) {
-                oldMod = await this.tryGetMod(uri, STAT);
+                oldMod = await this.tryGetMod(uri, STAT, conn);
             }
 
             await conn.client.put(
