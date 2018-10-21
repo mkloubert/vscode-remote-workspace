@@ -73,6 +73,8 @@ Create (or update) a `.code-workspace` file and open it by using `File >> Open W
 }
 ```
 
+If you've never created a `.code-workspace` file, you might start with a new folder in your home directory, for instance "VSCodeworkspace". Copy the json provided into a new file. Then, in the VS Code GUI, open that file using `File >> Open Workspace...`.
+
 ### About parameters [[&uarr;](#how-to-use-)]
 
 A parameter is a key-value-pair, which has to be setup in the URI and NOT in the `settings` section of a `.code-workspace` file.
@@ -385,7 +387,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?param1=value
 
 | Name | Description | Example | 
 | ---- | --------- | --------- | 
-| `agent` | Name or path to ssh-agent for ssh-agent-based user authentication. | `agent=myAgent` |
+| `agent` | Name or [path to ssh-agent](#ssh-agent-) for ssh-agent-based user authentication. | `agent=myAgent` |
 | `agentForward` | Set to `1`, to use OpenSSH agent forwarding (`auth-agent@openssh.com`) for the life of the connection. Default: `0` | `agentForward=1` |
 | `allowedHashes` | Comma-separated list of hashes to verify. | `allowedHashes=md5,sha-1` |
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftp_server1` |
@@ -428,6 +430,40 @@ Save the content to a file, like `sftp_modes.json`, inside your user directory, 
 To use the mappings, setup the `mode` parameter with the path of that file (in that example to `sftp_modes.json`). Relative paths will be mapped to the user's home directory.
 
 Glob patterns are handled by [minimatch](https://github.com/isaacs/minimatch).
+
+##### using ssh-agent [[&uarr;](#ssh-agent)]
+
+If you use ssh-agent for ssh login, you will likely need to use an environment variable to get the path for the `agent` parameter. To do this, you'll need to create a values json file to pull the appropriate variable. For instance, in MacOS X, the default ssh-agent path is in $SSH_AUTH_SOCK:
+
+```
+$ ssh-agent
+SSH_AUTH_SOCK=/var/folders/w9/mq8x8g87880wn99v2pdx77vr0000gn/T//ssh-VCVBAx48ZEXj/agent.37705; export SSH_AUTH_SOCK;
+...
+```
+
+Make a json file to get this value. For instance:
+
+```json
+{
+    "values": {
+        "SSHSOCK": {
+            "name": "SSH_AUTH_SOCK",
+            "type": "env"
+        }
+    }
+}
+```
+
+Finally, in your `.code-workspace` file, reference the values json file, and the agent. For instance, if your values json file is named `remotessh.json` in ~/VSCodeworkspace, your `.code-workspace` file might have
+
+```json
+{
+    "folders": [{
+        "uri": "sftp://my-user:my-password@sftp.example.com/?values=VSCodeworkspace/remotessh.json&agent=${SSHSOCK}"",
+        "name": "My SFTP folder"
+    }]
+}
+```
 
 ### Slack [[&uarr;](#how-to-use-)]
 
