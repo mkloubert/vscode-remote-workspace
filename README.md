@@ -388,7 +388,7 @@ URL Format: `sftp://[user:password@]host[:port][/path/to/a/folder][?param1=value
 
 | Name | Description | Example | 
 | ---- | --------- | --------- | 
-| `agent` | Name or [path to ssh-agent](#ssh-agent-) for ssh-agent-based user authentication. | `agent=myAgent` |
+| `agent` | Name or [path to ssh-agent](#using-ssh-agent-) for ssh-agent-based user authentication. | `agent=myAgent` |
 | `agentForward` | Set to `1`, to use OpenSSH agent forwarding (`auth-agent@openssh.com`) for the life of the connection. Default: `0` | `agentForward=1` |
 | `allowedHashes` | Comma-separated list of hashes to verify. | `allowedHashes=md5,sha-1` |
 | `auth` | A path to a file, that contains the part left to `@` (the credentials). Relative paths will be mapped to the user's home directory. | `auth=ftp_server1` |
