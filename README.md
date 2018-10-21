@@ -36,6 +36,7 @@ Multi protocol support of new [Visual Studio Code](https://code.visualstudio.com
    * [SFTP](#sftp-)
      * [Parameters](#parameters--5)
        * [mode](#mode-)
+       * [Using ssh-agent](#using-ssh-agent-)
    * [Slack](#slack-)
      * [Parameters](#parameters--6)
      * [Remarks](#remarks--1)
@@ -431,17 +432,17 @@ To use the mappings, setup the `mode` parameter with the path of that file (in t
 
 Glob patterns are handled by [minimatch](https://github.com/isaacs/minimatch).
 
-##### using ssh-agent [[&uarr;](#ssh-agent)]
+##### Using ssh-agent [[&uarr;](#parameters--4)]
 
-If you use ssh-agent for ssh login, you will likely need to use an environment variable to get the path for the `agent` parameter. To do this, you'll need to create a values json file to pull the appropriate variable. For instance, in MacOS X, the default ssh-agent path is in $SSH_AUTH_SOCK:
+If you use ssh-agent for ssh login, you will likely need to use an environment variable to get the path for the `agent` parameter. To do this, you'll need to create a values json file to pull the appropriate variable. For instance, in MacOS X, the default ssh-agent path is in `$SSH_AUTH_SOCK`:
 
-```
+```bash
 $ ssh-agent
 SSH_AUTH_SOCK=/var/folders/w9/mq8x8g87880wn99v2pdx77vr0000gn/T//ssh-VCVBAx48ZEXj/agent.37705; export SSH_AUTH_SOCK;
 ...
 ```
 
-Make a json file to get this value. For instance:
+Make a [json file](#placeholders-) to get this value. For instance:
 
 ```json
 {
@@ -454,12 +455,12 @@ Make a json file to get this value. For instance:
 }
 ```
 
-Finally, in your `.code-workspace` file, reference the values json file, and the agent. For instance, if your values json file is named `remotessh.json` in ~/VSCodeworkspace, your `.code-workspace` file might have
+Finally, in your `.code-workspace` file, reference the values json file, and the agent. For instance, if your values json file is named `remotessh.json` in `~/VSCodeworkspace`, your `.code-workspace` file might have
 
 ```json
 {
     "folders": [{
-        "uri": "sftp://my-user:my-password@sftp.example.com/?values=VSCodeworkspace/remotessh.json&agent=${SSHSOCK}"",
+        "uri": "sftp://my-user:my-password@sftp.example.com/?values=VSCodeworkspace/remotessh.json&agent=${SSHSOCK}",
         "name": "My SFTP folder"
     }]
 }
@@ -563,6 +564,7 @@ To work with the code:
 ### Contributors [[&uarr;](#support-and-contribute-)]
 
 * [drpark](https://github.com/drpark)
+* [mlibbey](https://github.com/mlibbey)
 
 ## Related projects [[&uarr;](#table-of-contents)]
 
