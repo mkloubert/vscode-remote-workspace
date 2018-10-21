@@ -432,7 +432,7 @@ To use the mappings, setup the `mode` parameter with the path of that file (in t
 
 Glob patterns are handled by [minimatch](https://github.com/isaacs/minimatch).
 
-##### Using ssh-agent [[&uarr;](#parameters--4)]
+##### Using ssh-agent [[&uarr;](#parameters--5)]
 
 If you use ssh-agent for ssh login, you will likely need to use an environment variable to get the path for the `agent` parameter. To do this, you'll need to create a values json file to pull the appropriate variable. For instance, in MacOS X, the default ssh-agent path is in `$SSH_AUTH_SOCK`:
 
