@@ -316,6 +316,21 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                 }
                 break;
 
+            case 'file':
+                {
+                    let credentialFile = vscode_helpers.toStringSafe(PARAMS['file']);
+                    if (!Path.isAbsolute(credentialFile)) {
+                        credentialFile = Path.resolve(
+                            Path.join(
+                                AWS_DIR, credentialFile
+                            )
+                        );
+                    }
+
+                    credentialConfig = credentialFile;
+                }
+                break;
+
             case 'shared':
                 {
                     const OPTS: SharedIniFileCredentialsOptions = {
