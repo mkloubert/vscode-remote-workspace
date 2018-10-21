@@ -327,6 +327,9 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
                         );
                     }
 
+                    this.logger
+                        .info(`Using credential file '${ credentialFile }'`, 'fs.s3.S3FileSystem.openConnection(file)');
+
                     credentialConfig = credentialFile;
                 }
                 break;
