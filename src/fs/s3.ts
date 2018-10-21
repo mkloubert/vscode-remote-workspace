@@ -346,7 +346,7 @@ export class S3FileSystem extends vscrw_fs.FileSystemBase {
         };
         if (vscrw.isTrue(PARAMS['debug'])) {
             logger = {
-                log: (messages) => {
+                log: (...messages: any[]) => {
                     try {
                         for (const M of messages) {
                             this.logger
