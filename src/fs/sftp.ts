@@ -449,8 +449,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             }
 
             const OPTS: any = {
-                agent: vscode_helpers.isEmptyString(agent) ? undefined
-                                                           : agent,
+                agent: vscode_helpers.isEmptyString(agent)
+                    ? (process.platform === 'win32' ? 'pageant' : process.env.SSH_AUTH_SOCK)
+                    : agent,
                 agentForward: vscrw.isTrue(agentForward),
                 host: HOST_AND_CRED.host,
                 hostHash: <any>('' === hostHash ? 'md5' : hostHash),
