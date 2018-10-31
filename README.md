@@ -564,6 +564,7 @@ To work with the code:
 ### Contributors [[&uarr;](#support-and-contribute-)]
 
 * [drpark](https://github.com/drpark)
+* [Massimiliano Torromeo](https://github.com/mtorromeo)
 * [mlibbey](https://github.com/mlibbey)
 
 ## Related projects [[&uarr;](#table-of-contents)]
