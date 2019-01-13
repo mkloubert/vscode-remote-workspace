@@ -59,7 +59,7 @@ type STPModeValueOrPath = string | number | false;
  */
 export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
     private readonly _CONN_CACHE: any = {};
-    private readonly _EXECUTE_REMOTE_COMMAND_LISTENER: Function;
+    private readonly _EXECUTE_REMOTE_COMMAND_LISTENER: vscrw.EventListener;
 
     /**
      * Initializes a new instance of that class.

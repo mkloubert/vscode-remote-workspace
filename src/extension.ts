@@ -52,6 +52,13 @@ export interface ActionQuickPickItem extends vscode.QuickPickItem {
 }
 
 /**
+ * An event listener function.
+ *
+ * @param {any[]} [args] One or more arguments for the event.
+ */
+export type EventListener = (...args: any[]) => void;
+
+/**
  * Arguments for an event that executes git on a remote workspace.
  */
 export interface ExecuteRemoteCommandArguments {

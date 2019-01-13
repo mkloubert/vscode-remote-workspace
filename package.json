@@ -112,7 +112,7 @@
         "@types/mocha": "^5.2.5",
         "@types/moment": "^2.13.0",
         "@types/moment-timezone": "^0.5.10",
-        "@types/node": "^10.12.18",
+        "@types/node": "8.9.3",
         "@types/uuid": "^3.4.4",
         "tslint": "^5.12.1",
         "typescript": "^3.2.2",
