@@ -106,9 +106,11 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             const STAT = await this.tryGetStat( uri, conn );
             if (false !== STAT) {
                 if (vscode.FileType.Directory === STAT.type) {
-                    throw vscode.FileSystemError.FileExists( uri );
+                    this.throwWithoutAuthority(uri,
+                                               u => vscode.FileSystemError.FileExists(u));
                 } else {
-                    throw vscode.FileSystemError.NoPermissions( uri );
+                    this.throwWithoutAuthority(uri,
+                                               u => vscode.FileSystemError.NoPermissions(u));
                 }
             }
 
@@ -537,7 +539,8 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
                     ]);
                 }
             } catch {
-                throw vscode.FileSystemError.FileNotFound( uri );
+                this.throwWithoutAuthority(uri,
+                                           u => vscode.FileSystemError.FileNotFound(u));
             }
 
             return vscode_helpers.from( ITEMS ).orderBy(i => {
@@ -596,7 +599,8 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             const NEW_STAT = await this.tryGetStat( newUri, conn );
             if (false !== NEW_STAT) {
                 if (!options.overwrite) {
-                    throw vscode.FileSystemError.FileExists( newUri );
+                    this.throwWithoutAuthority(newUri,
+                                               u => vscode.FileSystemError.FileExists(u));
                 }
             }
 
@@ -656,10 +660,11 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             } catch { }
 
             if (false === stat) {
-                throw vscode.FileSystemError.FileNotFound( uri );
+                this.throwWithoutAuthority(uri,
+                                           u => vscode.FileSystemError.FileNotFound(u));
             }
 
-            return stat;
+            return <SFTPFileStat>stat;
         }, existingConn);
     }
 

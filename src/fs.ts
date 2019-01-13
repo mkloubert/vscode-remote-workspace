@@ -127,6 +127,26 @@ export abstract class FileSystemBase extends vscode_helpers.DisposableBase imple
     }
 
     /**
+     * Throws an error fir an URI without authority.
+     *
+     * @param {vscode.Uri} uri The input URI.
+     * @param {Function} errorFactory The function that returns the error object, based on the URI without the authority.
+     */
+    protected throwWithoutAuthority(
+        uri: vscode.Uri,
+        errorFactory: (u: vscode.Uri) => any
+    ) {
+        const SAFE_URI = vscrw.uriWithoutAuthority(uri);
+
+        const ERROR = errorFactory(
+            SAFE_URI
+        );
+        if (ERROR) {
+            throw ERROR;
+        }
+    }
+
+    /**
      * @inheritdoc
      */
     public abstract watch(uri: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable;
