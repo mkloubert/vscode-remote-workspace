@@ -4,7 +4,7 @@
 
 ## 0.39.0 (January 13th, 2019; npm update)
 
-* extension requires at least [Visual Studio Code 1.28](https://code.visualstudio.com/updates/v1_28) now
+* extension requires at least [Visual Studio Code 1.30](https://code.visualstudio.com/updates/v1_30) now
 * updated the following [npm](https://www.npmjs.com/) modules:
   * [aws-sdk](https://www.npmjs.com/package/aws-sdk) `^2.387.0`
   * [marked](https://www.npmjs.com/package/marked) `^0.6.0`
