@@ -9,6 +9,7 @@
 * updated the following [npm](https://www.npmjs.com/) modules:
   * [aws-sdk](https://www.npmjs.com/package/aws-sdk) `^2.399.0`
   * [moment](https://www.npmjs.com/package/moment) `^2.24.0`
+  * [vscode-helpers](https://www.npmjs.com/package/vscode-helpers) `^4.0.1`
 
 ## 0.40.0 (January 14th, 2019; logging)
 
