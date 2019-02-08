@@ -563,6 +563,7 @@ To work with the code:
 
 ### Contributors [[&uarr;](#support-and-contribute-)]
 
+* [Angeart](https://github.com/Angeart)
 * [drpark](https://github.com/drpark)
 * [Massimiliano Torromeo](https://github.com/mtorromeo)
 * [mlibbey](https://github.com/mlibbey)
