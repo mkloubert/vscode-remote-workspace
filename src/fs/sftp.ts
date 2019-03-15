@@ -556,11 +556,9 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
      */
     public readFile(uri: vscode.Uri): Promise<Uint8Array> {
         return this.forConnection(uri, async (conn) => {
-            return vscode_helpers.asBuffer(
-                await conn.client.get(
-                    vscrw.normalizePath( uri.path )
-                )
-            );
+            return vscrw.asBuffer(await conn.client.get(
+                vscrw.normalizePath( uri.path )
+            ));
         });
     }
 
