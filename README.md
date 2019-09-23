@@ -74,7 +74,7 @@ Create (or update) a `.code-workspace` file and open it by using `File >> Open W
 }
 ```
 
-If you've never created a `.code-workspace` file, you might start with a new folder in your home directory, for instance "VSCodeworkspace". Copy the json provided into a new file. Then, in the VS Code GUI, open that file using `File >> Open Workspace...`.
+If you've never created a `.code-workspace` file, you might start with a new folder in your home directory, for instance you could name it "VSCodeWorkspace" or "MyApp". Copy the example configuration (shown above) into a new file, and make sure you edit the URI to be specific to your desired protocol and path. Save the file, ensuring the file name ends with `.code-workspace`. Then, in the VS Code GUI, open that file using `File >> Open Workspace...`; after a few moments you'll be connected to the URI you specified.
 
 ### About parameters [[&uarr;](#how-to-use-)]
 
