@@ -2,6 +2,23 @@
 
 [![Share via Facebook](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/share/Facebook.png)](https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace&quote=Remote%20Workspace) [![Share via Twitter](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/share/Twitter.png)](https://twitter.com/intent/tweet?source=https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace&text=Remote%20Workspace:%20https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace&via=mjkloubert) [![Share via Google+](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/share/Google+.png)](https://plus.google.com/share?url=https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace) [![Share via Pinterest](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/share/Pinterest.png)](http://pinterest.com/pin/create/button/?url=https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace&description=Visual%20Studio%20Code%20extension%2C%20which%20receives%20and%20shows%20git%20events%20from%20webhooks.) [![Share via Reddit](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/share/Reddit.png)](http://www.reddit.com/submit?url=https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace&title=Remote%20Workspace) [![Share via LinkedIn](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/share/LinkedIn.png)](http://www.linkedin.com/shareArticle?mini=true&url=https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace&title=Remote%20Workspace&summary=Visual%20Studio%20Code%20extension%2C%20which%20receives%20and%20shows%20git%20events%20from%20webhooks.&source=https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace) [![Share via Wordpress](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/share/Wordpress.png)](http://wordpress.com/press-this.php?u=https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace&quote=Remote%20Workspace&s=Visual%20Studio%20Code%20extension%2C%20which%20receives%20and%20shows%20git%20events%20from%20webhooks.) [![Share via Email](https://raw.githubusercontent.com/mkloubert/vscode-remote-workspace/master/img/share/Email.png)](mailto:?subject=Remote%20Workspace&body=Visual%20Studio%20Code%20extension%2C%20which%20receives%20and%20shows%20git%20events%20from%20webhooks.:%20https%3A%2F%2Fmarketplace.visualstudio.com%2Fitems%3FitemName%3Dmkloubert.vscode-remote-workspace)
 
+## 0.43.0 (September 30th, 2019; Visual Studio Code 1.38)
+
+* extension requires at least [Visual Studio Code 1.38](https://code.visualstudio.com/updates/v1_38) now
+* updated the following [npm](https://www.npmjs.com/) modules:
+  * [@slack/client](https://www.npmjs.com/package/@slack/client) `^5.0.2`
+  * [aws-sdk](https://www.npmjs.com/package/aws-sdk) `^2.538.0`
+  * [azure-storage](https://www.npmjs.com/package/azure-storage) `^2.10.3`
+  * [dropbox](https://www.npmjs.com/package/dropbox) `^4.0.30`
+  * [lodash](https://www.npmjs.com/package/lodash) `^4.17.15`
+  * [marked](https://www.npmjs.com/package/marked) `^0.7.0`
+  * [mime-types](https://www.npmjs.com/package/mime-types) `^2.1.24`
+  * [moment-timezone](https://www.npmjs.com/package/moment-timezone) `^0.5.26`
+  * [ssh2-sftp-client](https://www.npmjs.com/package/ssh2-sftp-client) `^4.2.0`
+  * [uuid](https://www.npmjs.com/package/uuid) `^3.3.3`
+  * [vscode-helpers](https://www.npmjs.com/package/vscode-helpers) `^5.1.1`
+* [Sandro](https://github.com/SuperSandro2000) and [TurekBot](https://github.com/TurekBot) improved [README.md](https://github.com/mkloubert/vscode-remote-workspace/blob/master/README.md)
+
 ## 0.42.0 (March 15th, 2019; sftp)
 
 * [Angeart](https://github.com/Angeart) updated [ssh2-sftp-client](https://www.npmjs.com/package/ssh2-sftp-client) to version 2.5.0 for a hot fix ... s. [pull request #113](https://github.com/mkloubert/vscode-remote-workspace/pull/113)

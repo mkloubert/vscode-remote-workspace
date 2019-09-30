@@ -567,6 +567,8 @@ To work with the code:
 * [drpark](https://github.com/drpark)
 * [Massimiliano Torromeo](https://github.com/mtorromeo)
 * [mlibbey](https://github.com/mlibbey)
+* [Sandro](https://github.com/SuperSandro2000)
+* [TurekBot](https://github.com/TurekBot)
 
 ## Related projects [[&uarr;](#table-of-contents)]
 
