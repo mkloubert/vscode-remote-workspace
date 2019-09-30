@@ -146,10 +146,10 @@ export class FTPsFileSystem extends vscrw_fs.FileSystemBase {
 
                 return await executeServerCommand(CONN.client, execArgs.command);
             } finally {
-                await tryCloseConnection(CONN);
+                tryCloseConnection(CONN);
             }
         } finally {
-            await tryCloseConnection(CONN);
+            tryCloseConnection(CONN);
         }
     }
 

@@ -416,7 +416,7 @@ export class SFTPFileSystem extends vscrw_fs.FileSystemBase {
             try {
                 if (!vscode_helpers.isEmptyString(passphrase)) {
                     if (!NO_PHRASE_FILE) {
-                        const PHRASE_FILE = await vscrw.mapToUsersHome(passphrase);
+                        const PHRASE_FILE = vscrw.mapToUsersHome(passphrase);
 
                         if (await vscode_helpers.isFile(PHRASE_FILE)) {
                             // read from file
