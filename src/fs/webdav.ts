@@ -276,6 +276,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                         conn.client.readdir(
                             toWebDAVPath(uri.path),
                             {
+                                extraProperties: [],
                                 properties: false,
                             },
                             (err: any, files: string[]) => {
@@ -442,6 +443,7 @@ export class WebDAVFileSystem extends vscrw_fs.FileSystemBase {
                                                                  conn.encoding, conn.binaryEncoding);
 
                                     COMPLETED(null,
+                                              // @ts-ignore
                                               new Buffer(vscode_helpers.toStringSafe(body), ENC));
                                 } catch (e) {
                                     COMPLETED(e);
